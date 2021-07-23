@@ -75,13 +75,26 @@ variables [module R M] [module R M₂]
 def to_distrib_mul_action_hom (f : M →ₗ[R] M₂) : distrib_mul_action_hom R M M₂ :=
 { map_zero' := zero_smul R (0 : M) ▸ zero_smul R (f.to_fun 0) ▸ f.map_smul' 0 0, ..f }
 
-instance : has_coe_to_fun (M →ₗ[R] M₂) := ⟨_, to_fun⟩
+instance : add_hom_class (M →ₗ[R] M₂) M M₂ :=
+{ coe := linear_map.to_fun,
+  coe_injective' := λ f g h, by cases f; cases g; congr',
+  map_add := linear_map.map_add' }
+
+@[simp] lemma to_fun_eq_coe {f : M →ₗ[R] M₂} : f.to_fun = (f : M → M₂) := rfl
+
+@[ext] theorem ext {f g : M →ₗ[R] M₂} (h : ∀ x, f x = g x) : f = g := fun_like.ext f g h
+
+/-- Copy of a `my_hom` with a new `to_fun` equal to the old one. Useful to fix definitional
+equalities. -/
+protected def copy (f : M →ₗ[R] M₂) (f' : M → M₂) (h : f' = ⇑f) : M →ₗ[R] M₂ :=
+{ to_fun := f',
+  map_add' := h.symm ▸ f.map_add',
+  map_smul' := h.symm ▸ f.map_smul' }
 
 initialize_simps_projections linear_map (to_fun → apply)
 
 @[simp] lemma coe_mk (f : M → M₂) (h₁ h₂) :
   ((linear_map.mk f h₁ h₂ : M →ₗ[R] M₂) : M → M₂) = f := rfl
-
 
 /-- Identity map as a `linear_map` -/
 def id : M →ₗ[R] M :=
@@ -99,21 +112,19 @@ section
 variables [module R M] [module R M₂]
 variables (f g : M →ₗ[R] M₂)
 
-@[simp] lemma to_fun_eq_coe : f.to_fun = ⇑f := rfl
-
 theorem is_linear : is_linear_map R f := ⟨f.map_add', f.map_smul'⟩
 
 variables {f g}
 
+-- TODO: can be replaced with `fun_like.coe_injective`
 theorem coe_injective : @injective (M →ₗ[R] M₂) (M → M₂) coe_fn :=
 by rintro ⟨f, _⟩ ⟨g, _⟩ ⟨h⟩; congr
 
-@[ext] theorem ext (H : ∀ x, f x = g x) : f = g :=
-coe_injective $ funext H
-
+-- TODO: can be replaced with `fun_like.congr_arg`
 protected lemma congr_arg : Π {x x' : M}, x = x' → f x = f x'
 | _ _ rfl := rfl
 
+-- TODO: can be replaced with `fun_like.congr_fun`
 /-- If two linear maps are equal, they are equal at each point. -/
 protected lemma congr_fun (h : f = g) (x : M) : f x = g x := h ▸ rfl
 
@@ -125,7 +136,7 @@ theorem ext_iff : f = g ↔ ∀ x, f x = g x :=
 
 variables (f g)
 
-@[simp] lemma map_add (x y : M) : f (x + y) = f x + f y := f.map_add' x y
+protected lemma map_add (x y : M) : f (x + y) = f x + f y := f.map_add' x y
 
 @[simp] lemma map_smul (c : R) (x : M) : f (c • x) = c • f x := f.map_smul' c x
 
