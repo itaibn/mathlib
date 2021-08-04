@@ -6,6 +6,7 @@ Authors: Jeremy Avigad, Leonardo de Moura, Mario Carneiro
 import algebra.ordered_group
 import algebra.invertible
 import data.set.intervals.basic
+import algebra.ordered_sub
 
 -- This should probably go into Lean core.
 lemma nat.succ_eq_one_add (n : ℕ) : n.succ = 1 + n :=
@@ -1354,6 +1355,10 @@ lemma zero_lt_one [nontrivial α] : (0:α) < 1 := (zero_le 1).lt_of_ne zero_ne_o
 
 lemma mul_pos : 0 < a * b ↔ (0 < a) ∧ (0 < b) :=
 by simp only [pos_iff_ne_zero, ne.def, mul_eq_zero, not_or_distrib]
+
+/-! Results about `has_ordered_sub`. -/
+
+
 
 end canonically_ordered_comm_semiring
 
