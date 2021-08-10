@@ -75,10 +75,11 @@ variables [module R M] [module R M₂]
 def to_distrib_mul_action_hom (f : M →ₗ[R] M₂) : distrib_mul_action_hom R M M₂ :=
 { map_zero' := zero_smul R (0 : M) ▸ zero_smul R (f.to_fun 0) ▸ f.map_smul' 0 0, ..f }
 
-instance : add_hom_class (M →ₗ[R] M₂) M M₂ :=
+instance : add_monoid_hom_class (M →ₗ[R] M₂) M M₂ :=
 { coe := linear_map.to_fun,
   coe_injective' := λ f g h, by cases f; cases g; congr',
-  map_add := linear_map.map_add' }
+  map_add := linear_map.map_add',
+  map_zero := λ f, f.to_distrib_mul_action_hom.map_zero }
 
 /-- Helper instance for when there's too many metavariables to apply `to_fun.to_coe_fn` directly. -/
 instance : has_coe_to_fun (M →ₗ[R] M₂) := to_fun.to_coe_fn
@@ -264,14 +265,14 @@ end add_comm_monoid
 section add_comm_group
 
 variables [semiring R] [add_comm_group M] [add_comm_group M₂]
-variables {module_M : module R M} {module_M₂ : module R M₂}
+variables {_module_1 : module R M} {_module_2 : module R M₂}
 variables (f : M →ₗ[R] M₂)
 
 protected lemma map_neg (x : M) : f (- x) = - f x :=
 map_neg f x
 
 protected lemma map_sub (x y : M) : f (x - y) = f x - f y :=
-f.to_add_monoid_hom.map_sub x y
+map_sub f x y
 
 instance compatible_smul.int_module
   {S : Type*} [semiring S] [module S M] [module S M₂] : compatible_smul M M₂ ℤ S :=
@@ -478,6 +479,11 @@ lemma to_linear_map_injective : function.injective (coe : (M ≃ₗ[R] M₂) →
   (e₁ : M →ₗ[R] M₂) = e₂ ↔ e₁ = e₂ :=
 to_linear_map_injective.eq_iff
 
+instance : add_monoid_hom_class (M ≃ₗ[R] M₂) M M₂ :=
+{ coe := linear_equiv.to_fun,
+  coe_injective' := λ f g h, to_linear_map_injective (fun_like.coe_injective h),
+  map_add := linear_equiv.map_add',
+  map_zero := λ f, f.to_linear_map.map_zero }
 end
 
 section

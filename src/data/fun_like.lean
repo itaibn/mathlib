@@ -49,6 +49,10 @@ extensionality and simp lemmas.
 -/
 set_option old_structure_cmd true
 
+-- This instance should have low priority, to ensure we follow the chain
+-- `fun_like → to_fun → has_coe_to_fun`
+attribute [instance, priority 10] coe_fn_trans
+
 /-- The class `to_fun F α β` expresses that terms of type `F` can be coerced
 to functions from `α` to `β`.
 
@@ -73,7 +77,7 @@ class fun_like (F : Type*) (α β : out_param Type*)
 
 variables {F α β : Type*}
 
-@[nolint instance_priority, -- needs to have a higer priority than `coe_fn_trans`
+@[priority 100, -- Give this a priority between `coe_fn_trans` and the default priority
   nolint dangerous_instance] -- `α` and `β` are out_params, so this instance should not be dangerous
 instance to_fun.to_coe_fn [to_fun F α β] : has_coe_to_fun F :=
 { F := λ _, α → β,
