@@ -80,6 +80,9 @@ instance : add_hom_class (M →ₗ[R] M₂) M M₂ :=
   coe_injective' := λ f g h, by cases f; cases g; congr',
   map_add := linear_map.map_add' }
 
+/-- Helper instance for when there's too many metavariables to apply `to_fun.to_coe_fn` directly. -/
+instance : has_coe_to_fun (M →ₗ[R] M₂) := to_fun.to_coe_fn
+
 @[simp] lemma to_fun_eq_coe {f : M →ₗ[R] M₂} : f.to_fun = (f : M → M₂) := rfl
 
 @[ext] theorem ext {f g : M →ₗ[R] M₂} (h : ∀ x, f x = g x) : f = g := fun_like.ext f g h
@@ -264,10 +267,10 @@ variables [semiring R] [add_comm_group M] [add_comm_group M₂]
 variables {module_M : module R M} {module_M₂ : module R M₂}
 variables (f : M →ₗ[R] M₂)
 
-@[simp] lemma map_neg (x : M) : f (- x) = - f x :=
-f.to_add_monoid_hom.map_neg x
+protected lemma map_neg (x : M) : f (- x) = - f x :=
+map_neg f x
 
-@[simp] lemma map_sub (x y : M) : f (x - y) = f x - f y :=
+protected lemma map_sub (x y : M) : f (x - y) = f x - f y :=
 f.to_add_monoid_hom.map_sub x y
 
 instance compatible_smul.int_module
@@ -276,7 +279,7 @@ instance compatible_smul.int_module
   induction c using int.induction_on,
   case hz : { simp },
   case hp : n ih { simp [add_smul, ih] },
-  case hn : n ih { simp [sub_smul, ih] }
+  case hn : n ih { simp [sub_smul, ih, map_neg] }
 end⟩
 
 instance compatible_smul.units {R S : Type*}

@@ -270,7 +270,7 @@ lemma mul_eq_comp (f g : M →ₗ[R] M) : f * g = f.comp g := rfl
 @[simp] lemma mul_apply (f g : M →ₗ[R] M) (x : M) : (f * g) x = f (g x) := rfl
 
 lemma coe_one : ⇑(1 : M →ₗ[R] M) = _root_.id := rfl
-lemma coe_mul (f g : M →ₗ[R] M) : ⇑(f * g) = f ∘ g := rfl
+lemma coe_mul (f g : M →ₗ[R] M) : ((f * g : M →ₗ M) : M → M) = f ∘ g := rfl
 
 instance [nontrivial M] : nontrivial (module.End R M) :=
 begin
