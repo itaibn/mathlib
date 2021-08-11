@@ -72,7 +72,7 @@ def N (B : group_filter_basis G) : G → filter G :=
 
 @[simp, to_additive]
 lemma N_one (B : group_filter_basis G) : B.N 1 = B.to_filter_basis.filter :=
-by simpa [N, map_id]
+by simp only [N, one_mul, map_id']
 
 -- The next lemma connects to the new mathlib filter.has_basis
 @[to_additive]
