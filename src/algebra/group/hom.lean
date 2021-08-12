@@ -891,18 +891,18 @@ left_inv_eq_right_inv (map_mul_eq_one f $ inv_mul_self x) $
 
 /-- Group homomorphisms preserve inverse. -/
 @[to_additive]
-theorem map_inv {G H} [group G] [group H] (f : G →* H) (g : G) : f g⁻¹ = (f g)⁻¹ :=
+protected theorem map_inv {G H} [group G] [group H] (f : G →* H) (g : G) : f g⁻¹ = (f g)⁻¹ :=
 map_inv f g
 
 /-- Group homomorphisms preserve division. -/
 @[to_additive, to_additive /-" Additive group homomorphisms preserve subtraction. "-/]
-theorem map_div {G H} [group G] [group H] (f : G →* H) (g h : G) :
+protected theorem map_div {G H} [group G] [group H] (f : G →* H) (g h : G) :
   f (g / h) = f g / f h :=
 map_div f g h
 
 /-- Group homomorphisms preserve division. -/
 @[to_additive]
-theorem map_mul_inv {G H} [group G] [group H] (f : G →* H) (g h : G) :
+protected theorem map_mul_inv {G H} [group G] [group H] (f : G →* H) (g h : G) :
 f (g * h⁻¹) = (f g) * (f h)⁻¹ :=
 map_mul_inv f g h
 
