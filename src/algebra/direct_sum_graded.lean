@@ -294,7 +294,7 @@ end one
 section mul
 variables [has_add ι] [Π i, add_comm_monoid (A i)] [ghas_mul A]
 
-open add_monoid_hom (map_zero map_add flip_apply coe_comp comp_hom_apply_apply)
+open add_monoid_hom (flip_apply coe_comp comp_hom_apply_apply)
 
 /-- The multiplication from the `has_mul` instance, as a bundled homomorphism. -/
 def mul_hom : (⨁ i, A i) →+ (⨁ i, A i) →+ ⨁ i, A i :=
