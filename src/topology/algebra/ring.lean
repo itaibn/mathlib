@@ -29,8 +29,8 @@ of topological (semi)rings.
 
 -/
 
-open classical set filter topological_space
-open_locale classical
+open classical set filter topological_space function
+open_locale classical topological_space filter
 
 section topological_ring
 variables (α : Type*)
@@ -83,6 +83,30 @@ end
 class topological_ring [topological_space α] [ring α]
   extends has_continuous_add α, has_continuous_mul α : Prop :=
 (continuous_neg : continuous (λa:α, -a))
+
+lemma topological_ring.of_nhds_zero [ring α] [topological_space α]
+  (hadd : tendsto (uncurry ((+) : α → α → α)) ((𝓝 0) ×ᶠ (𝓝 0)) $ 𝓝 0)
+  (hneg : tendsto (λ x, -x : α → α) (𝓝 0) (𝓝 0))
+  (hmul : tendsto (uncurry ((*) : α → α → α)) ((𝓝 0) ×ᶠ (𝓝 0)) $ 𝓝 0)
+  (hmul_left : ∀ (x₀ : α), tendsto (λ x : α, x₀ * x) (𝓝 0) $ 𝓝 0)
+  (hmul_right : ∀ (x₀ : α), tendsto (λ x : α, x * x₀) (𝓝 0) $ 𝓝 0)
+  (hleft : ∀ x₀ : α, 𝓝 x₀ = map (λ x, x₀ + x) (𝓝 0)) : topological_ring α :=
+begin
+  refine {..topological_add_group.of_comm_of_nhds_zero hadd hneg hleft, ..},
+  rw continuous_iff_continuous_at,
+  rintro ⟨x₀, y₀⟩,
+  rw [continuous_at, nhds_prod_eq, hleft x₀, hleft y₀, hleft (x₀*y₀), filter.prod_map_map_eq,
+      tendsto_map'_iff],
+  suffices :
+    tendsto ((λ (x : α), x + x₀ * y₀) ∘ (λ (p : α × α), p.1 + p.2) ∘
+              (λ (p : α × α), (p.1*y₀ + x₀*p.2, p.1*p.2)))
+            ((𝓝 0) ×ᶠ (𝓝 0)) (map (λ (x : α), x + x₀ * y₀) $ 𝓝 0),
+  { convert this using 1,
+    { ext, simp only [comp_app, mul_add, add_mul], abel },
+    { simp only [add_comm] } },
+  refine tendsto_map.comp (hadd.comp (tendsto.prod_mk _ hmul)),
+  exact hadd.comp (((hmul_right y₀).comp tendsto_fst).prod_mk ((hmul_left  x₀).comp tendsto_snd))
+end
 
 variables {α} [ring α] [topological_space α]
 
