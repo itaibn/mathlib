@@ -7,7 +7,6 @@ import topology.uniform_space.uniform_embedding
 import topology.uniform_space.complete_separated
 import topology.algebra.group
 import tactic.abel
-import deprecated.group
 
 /-!
 # Uniform structure on topological groups
@@ -17,8 +16,6 @@ import deprecated.group
 
 * extension of ℤ-bilinear maps to complete groups (useful for ring completions)
 
-* `add_group_with_zero_nhd`: construct the topological structure from a group with a neighbourhood
-  around zero. Then with `topological_add_group.to_uniform_space` one can derive a `uniform_space`.
 -/
 
 noncomputable theory
