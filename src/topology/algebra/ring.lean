@@ -84,15 +84,19 @@ class topological_ring [topological_space α] [ring α]
   extends has_continuous_add α, has_continuous_mul α : Prop :=
 (continuous_neg : continuous (λa:α, -a))
 
-lemma topological_ring.of_nhds_zero [ring α] [topological_space α]
-  (hadd : tendsto (uncurry ((+) : α → α → α)) ((𝓝 0) ×ᶠ (𝓝 0)) $ 𝓝 0)
-  (hneg : tendsto (λ x, -x : α → α) (𝓝 0) (𝓝 0))
+variables {α} [ring α] [topological_space α]
+
+lemma topological_ring.of_add_group_of_nhds_zero [topological_add_group α]
   (hmul : tendsto (uncurry ((*) : α → α → α)) ((𝓝 0) ×ᶠ (𝓝 0)) $ 𝓝 0)
   (hmul_left : ∀ (x₀ : α), tendsto (λ x : α, x₀ * x) (𝓝 0) $ 𝓝 0)
-  (hmul_right : ∀ (x₀ : α), tendsto (λ x : α, x * x₀) (𝓝 0) $ 𝓝 0)
-  (hleft : ∀ x₀ : α, 𝓝 x₀ = map (λ x, x₀ + x) (𝓝 0)) : topological_ring α :=
+  (hmul_right : ∀ (x₀ : α), tendsto (λ x : α, x * x₀) (𝓝 0) $ 𝓝 0) : topological_ring α :=
 begin
-  refine {..topological_add_group.of_comm_of_nhds_zero hadd hneg hleft, ..},
+  refine {..‹topological_add_group α›, ..},
+  have hleft : ∀ x₀ : α, 𝓝 x₀ = map (λ x, x₀ + x) (𝓝 0), by simp,
+  have hadd : tendsto (uncurry ((+) : α → α → α)) ((𝓝 0) ×ᶠ (𝓝 0)) (𝓝 0),
+  { rw ← nhds_prod_eq,
+    convert continuous_add.tendsto ((0 : α), (0 : α)),
+    rw zero_add },
   rw continuous_iff_continuous_at,
   rintro ⟨x₀, y₀⟩,
   rw [continuous_at, nhds_prod_eq, hleft x₀, hleft y₀, hleft (x₀*y₀), filter.prod_map_map_eq,
@@ -108,7 +112,17 @@ begin
   exact hadd.comp (((hmul_right y₀).comp tendsto_fst).prod_mk ((hmul_left  x₀).comp tendsto_snd))
 end
 
-variables {α} [ring α] [topological_space α]
+lemma topological_ring.of_nhds_zero
+  (hadd : tendsto (uncurry ((+) : α → α → α)) ((𝓝 0) ×ᶠ (𝓝 0)) $ 𝓝 0)
+  (hneg : tendsto (λ x, -x : α → α) (𝓝 0) (𝓝 0))
+  (hmul : tendsto (uncurry ((*) : α → α → α)) ((𝓝 0) ×ᶠ (𝓝 0)) $ 𝓝 0)
+  (hmul_left : ∀ (x₀ : α), tendsto (λ x : α, x₀ * x) (𝓝 0) $ 𝓝 0)
+  (hmul_right : ∀ (x₀ : α), tendsto (λ x : α, x * x₀) (𝓝 0) $ 𝓝 0)
+  (hleft : ∀ x₀ : α, 𝓝 x₀ = map (λ x, x₀ + x) (𝓝 0)) : topological_ring α :=
+begin
+  haveI := topological_add_group.of_comm_of_nhds_zero hadd hneg hleft,
+  exact topological_ring.of_add_group_of_nhds_zero hmul hmul_left hmul_right
+end
 
 section
 variables [t : topological_ring α]
