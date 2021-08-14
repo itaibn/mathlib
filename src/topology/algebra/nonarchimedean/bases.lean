@@ -9,6 +9,10 @@ import algebra.module.submodule
 import topology.algebra.nonarchimedean.basic
 import topology.algebra.filter_basis
 
+/-!
+# Bases for topological algebraic structures
+-/
+
 open set filter function lattice add_group_with_zero_nhd
 
 structure subgroups_basis {A ι : Type*} [ring A] (B : ι → add_subgroup A) : Prop :=

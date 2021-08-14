@@ -6,7 +6,9 @@ Authors: Patrick Massot
 
 import topology.algebra.nonarchimedean.bases
 import algebra.lie.ideal_operations
-
+/-!
+# Adic topology
+-/
 
 variables {R : Type*} [comm_ring R]
 
