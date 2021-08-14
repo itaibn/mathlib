@@ -213,7 +213,9 @@ lemma mul_right {B : ring_filter_basis R} (x₀ : R) {U : set R} (hU : U ∈ B) 
   ∃ V ∈ B, V ⊆ (λ x, x*x₀) ⁻¹' U :=
 mul_right' x₀ hU
 
-lemma is_topological_ring {R : Type u} [ring R] (B : ring_filter_basis R) :
+/-- If a ring is endowed with a topological structure coming from
+a ring filter basis then it's a topological ring. -/
+instance is_topological_ring {R : Type u} [ring R] (B : ring_filter_basis R) :
   @topological_ring R B.to_add_group_filter_basis.topology _ :=
 begin
   let B' := B.to_add_group_filter_basis,
