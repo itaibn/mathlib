@@ -10,11 +10,28 @@ import topology.algebra.nonarchimedean.basic
 import topology.algebra.filter_basis
 
 /-!
-# Bases for topological algebraic structures
+# Neighborhood bases for non-archimedean rings
+
+This files contains special families of filter bases on rings that give rise to non archimedean
+topologies.
+
+The main definition is `subgroups_basis` which is a predicate on a family of
+additive subgroups of a ring. The predicate ensures there is a topology `subgroups_basis.topology`
+which is compatible with a ring structure and admits the given family as a basis of neighborhoods
+of zero. In particular the given subgroups become open subgroups (bundled in
+`subgroups_basis.open_add_subgroup`) and we get a non-archimedean topological ring
+(`subgroups_basis.nonarchimedean`).
+
+A special case of this construction is given by `submodules_basis` where the subgroups are
+sub-modules in a commutative algebra. This important example gives rises to the adic topology
+(studied in its own file).
 -/
 
 open set filter function lattice add_group_with_zero_nhd
 
+/-- A family of additive subgroups on a ring `A` is a subgroups basis if it satisfies some
+axioms ensuring there is a topology on `A` which is compatiable with the ring structure and
+admits this family as a basis of neighborhoods of zero. -/
 structure subgroups_basis {A ι : Type*} [ring A] (B : ι → add_subgroup A) : Prop :=
 (inter : ∀ i j, ∃ k, B k ≤ B i ⊓ B j)
 (mul : ∀ i, ∃ j, (B j : set A) * B j ⊆ B i)
@@ -39,6 +56,7 @@ lemma of_comm {A ι : Type*} [comm_ring A] (B : ι → add_subgroup A)
     simpa [mul_comm] using hj
   end }
 
+/-- Every subgroups basis on a ring leads to a ring filter basis. -/
 def to_ring_filter_basis [nonempty ι] {B : ι → add_subgroup A}
   (hB : subgroups_basis B) : ring_filter_basis A :=
 { sets := {U | ∃ i, U = B i},
@@ -84,9 +102,13 @@ def to_ring_filter_basis [nonempty ι] {B : ι → add_subgroup A}
 
 variables [nonempty ι] {B : ι → add_subgroup A} (hB : subgroups_basis B)
 
+/-- The topology defined from a subgroups basis, admitting the given subgroups as a basis
+of neighborhoods of zero. -/
 def topology : topological_space A :=
 hB.to_ring_filter_basis.to_add_group_filter_basis.topology
 
+/-- Given a subgroups basis, the basis elements as open additive subgroups in the associated
+topology. -/
 def open_add_subgroup (i : ι) : @open_add_subgroup A _ hB.topology:=
 { is_open' := begin
     letI := hB.topology,
@@ -117,6 +139,9 @@ variables {ι R A : Type*} [comm_ring R] [comm_ring A] [algebra R A]
 instance toto : has_scalar A (submodule R A) :=
 ⟨λ a S, submodule.map ((linear_map.lsmul A A a).restrict_scalars R) S⟩
 
+/-- A family of submodules in a commutative `R`-algebra `A` is a submodules basis if it satisfies
+some axioms ensuring there is a topology on `A` which is compatiable with the ring structure and
+admits this family as a basis of neighborhoods of zero. -/
 structure submodules_basis (B : ι → submodule R A) : Prop :=
 (inter : ∀ i j, ∃ k, B k ≤ B i ⊓ B j)
 (left_mul : ∀ (a : A) i, ∃ j, a • B j ≤ B i)
@@ -126,7 +151,7 @@ namespace submodules_basis
 
 variables {B : ι → submodule R A} (hB : submodules_basis B)
 
-def to_subgroups_basis (hB : submodules_basis B) :
+lemma to_subgroups_basis (hB : submodules_basis B) :
   subgroups_basis (λ i, (B i).to_add_subgroup) :=
 begin
   apply subgroups_basis.of_comm (λ i, (B i).to_add_subgroup) hB.inter hB.mul,
