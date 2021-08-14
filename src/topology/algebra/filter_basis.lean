@@ -118,7 +118,7 @@ begin
   { intros x U U_in,
     rw (B.has_basis x).mem_iff at U_in,
     rcases U_in with ⟨V, V_in, H⟩,
-    simpa [mem_pure_sets] using H (mem_image_of_mem _ (group_filter_basis.one V_in)), },
+    simpa [mem_pure] using H (mem_image_of_mem _ (group_filter_basis.one V_in)), },
   { intros x U U_in,
     rw (B.has_basis x).mem_iff at U_in,
     rcases U_in with ⟨V, V_in, H⟩,
@@ -139,11 +139,6 @@ end
 @[to_additive]
 def topology (B : group_filter_basis G) : topological_space G :=
 topological_space.mk_of_nhds B.N
-
-/- /-- The topological space structure coming a group filter basis. Version using tc resolution -/
-@[to_additive]
-def to_topological_space [B : group_filter_basis G] : topological_space G :=
-B.topology -/
 
 @[to_additive]
 lemma nhds_eq (B : group_filter_basis G) {x₀ : G} :
