@@ -47,7 +47,8 @@ lemma has_basis_nhds_zero_adic (I : ideal R) :
   has_basis (@nhds R I.adic_topology (0 : R)) (λ n : ℕ, true) (λ n, ((I^n : ideal R) : set R)) :=
 ⟨begin
   intros U,
-  rw I.adic_basis.to_subgroups_basis.to_ring_filter_basis.to_add_group_filter_basis.nhds_zero_has_basis.mem_iff,
+  rw (I.adic_basis.to_subgroups_basis.to_ring_filter_basis.to_add_group_filter_basis
+      .nhds_zero_has_basis.mem_iff),
   split,
   { rintros ⟨-, ⟨i, rfl⟩, h⟩,
     use [i, trivial, h] },
@@ -77,7 +78,8 @@ begin
   { rintro ⟨H₁, H₂⟩,
     apply topological_add_group.ext,
     { apply @topological_ring.to_topological_add_group },
-    { apply (subgroups_basis.to_ring_filter_basis _).to_add_group_filter_basis.is_topological_add_group },
+    { apply ((subgroups_basis.to_ring_filter_basis _).to_add_group_filter_basis
+             .is_topological_add_group) },
     { ext s,
       letI := ideal.adic_basis J,
       rw J.has_basis_nhds_zero_adic.mem_iff,
