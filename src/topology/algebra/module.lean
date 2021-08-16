@@ -24,7 +24,7 @@ Continuous linear equivalences are denoted by `M ≃L[R] M₂`.
 -/
 
 open filter
-open_locale topological_space big_operators
+open_locale topological_space big_operators filter
 
 universes u v w u'
 
@@ -33,7 +33,45 @@ section
 variables {R : Type*} {M : Type*}
 [ring R] [topological_space R]
 [topological_space M] [add_comm_group M]
-[module R M] [has_continuous_smul R M]
+[module R M]
+
+lemma has_continuous_smul.of_nhds_zero [topological_ring R] [topological_add_group M]
+  (hmul : tendsto (λ p : R × M, p.1 • p.2) (𝓝 0 ×ᶠ (𝓝 0)) (𝓝 0))
+  (hmulleft : ∀ m : M, tendsto (λ a : R, a • m) (𝓝 0) (𝓝 0))
+  (hmulright : ∀ a : R, tendsto (λ m : M, a • m) (𝓝 0) (𝓝 0)) : has_continuous_smul R M :=
+⟨begin
+  rw continuous_iff_continuous_at,
+  rintros ⟨a₀, m₀⟩,
+  have key : ∀ p : R × M,
+    p.1 • p.2 = a₀ • m₀ + ((p.1 - a₀) • m₀ + a₀ • (p.2 - m₀) + (p.1 - a₀) • (p.2 - m₀)),
+  { rintro ⟨a, m⟩,
+    simp [sub_smul, smul_sub],
+    abel },
+  rw funext key, clear key,
+  refine tendsto_const_nhds.add (tendsto.add (tendsto.add _ _) _),
+  { rw [sub_self, zero_smul],
+    apply (hmulleft m₀).comp,
+    rw [show (λ p : R × M, p.1 - a₀) = (λ a, a - a₀) ∘ prod.fst, by {ext, refl }, nhds_prod_eq],
+    have : tendsto (λ a, a - a₀) (𝓝 a₀) (𝓝 0),
+    { rw ← sub_self a₀,
+      exact tendsto_id.sub tendsto_const_nhds },
+    exact this.comp tendsto_fst  },
+  { rw [sub_self, smul_zero],
+    apply (hmulright a₀).comp,
+    rw [show (λ p : R × M, p.2 - m₀) = (λ m, m - m₀) ∘ prod.snd, by {ext, refl }, nhds_prod_eq],
+    have : tendsto (λ m, m - m₀) (𝓝 m₀) (𝓝 0),
+    { rw ← sub_self m₀,
+      exact tendsto_id.sub tendsto_const_nhds },
+    exact this.comp tendsto_snd },
+  { rw [sub_self, zero_smul, nhds_prod_eq,
+        show (λ p : R × M, (p.fst - a₀) • (p.snd - m₀)) =
+             (λ  p : R × M, p.1 • p.2) ∘ (prod.map (λ a, a - a₀) (λ m, m - m₀)), by { ext, refl }],
+    apply hmul.comp (tendsto.prod_map _ _);
+    { rw ← sub_self ,
+      exact tendsto_id.sub tendsto_const_nhds } },
+end⟩
+
+variables [has_continuous_smul R M]
 
 /-- If `M` is a topological module over `R` and `0` is a limit of invertible elements of `R`, then
 `⊤` is the only submodule of `M` with a nonempty interior.

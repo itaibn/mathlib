@@ -5,7 +5,7 @@ Authors: Patrick Massot
 -/
 
 import topology.algebra.nonarchimedean.bases
-import algebra.lie.ideal_operations
+import ring_theory.ideal.operations
 /-!
 # Adic topology
 
@@ -32,6 +32,11 @@ corresponding adic topology to the type class inference system.
   a basis of open neighborhoods of zero.
 * `with_ideal`: a class registering an ideal in a ring.
 
+## Implementation notes
+
+The `I`-adic topology on a ring `R` has a contrived definition using `I^n • ⊤` instead of `I`
+to make sure it is definitionnaly equal to the `I`-topology on `R` seen as a `R`-module.
+
 -/
 
 variables {R : Type*} [comm_ring R]
@@ -39,50 +44,87 @@ variables {R : Type*} [comm_ring R]
 open set topological_add_group submodule filter
 open_locale topological_space
 
-
 namespace ideal
 
-lemma adic_basis (I : ideal R) : submodules_basis (λ n : ℕ, (I^n : ideal R)) :=
+lemma adic_basis (I : ideal R) : submodules_ring_basis (λ n : ℕ, (I^n • ⊤ : ideal R)) :=
 { inter := begin
+    suffices : ∀ i j : ℕ, ∃ k, I ^ k ≤ I ^ i ∧ I ^ k ≤ I ^ j, by simpa,
     intros i j,
-    use (i + j),
-    rw pow_add,
-    exact mul_le_inf
+    exact ⟨max i j, pow_le_pow (le_max_left i j), pow_le_pow (le_max_right i j)⟩
   end,
   left_mul := begin
+    suffices : ∀ (a : R) (i : ℕ), ∃ j : ℕ, a • I ^ j ≤ I ^ i,  by simpa,
     intros r n,
     use n,
     rintro a ⟨x, hx, rfl⟩,
     exact (I ^ n).smul_mem r hx
   end,
   mul := begin
+    suffices : ∀ (i : ℕ), ∃ (j : ℕ), ↑(I ^ j) * ↑(I ^ j) ⊆ ↑(I ^ i), by simpa,
     intro n,
     use n,
     rintro a ⟨x, b, hx, hb, rfl⟩,
     exact (I^n).smul_mem x hb
   end }
 
+/-- The adic ring filter basis associated to an ideal `I` is made of powers of `I`. -/
+def ring_filter_basis (I : ideal R) := I.adic_basis.to_ring_subgroups_basis.to_ring_filter_basis
+
 /-- The adic topology associated to an ideal `I`. This topology admits powers of `I` as a basis of
 neighborhoods of zero. It is compatible with the ring structure and is non-archimedean. -/
 def adic_topology (I : ideal R) : topological_space R :=
-(adic_basis I).to_subgroups_basis.topology
+(adic_basis I).topology
 
 lemma nonarchimedean (I : ideal R) : @nonarchimedean_ring R _ I.adic_topology :=
-I.adic_basis.to_subgroups_basis.nonarchimedean
+I.adic_basis.to_ring_subgroups_basis.nonarchimedean
 
 /-- For the `I`-adic topology, the neighborhoods of zero has basis given by the powers of `I`. -/
 lemma has_basis_nhds_zero_adic (I : ideal R) :
   has_basis (@nhds R I.adic_topology (0 : R)) (λ n : ℕ, true) (λ n, ((I^n : ideal R) : set R)) :=
 ⟨begin
   intros U,
-  rw I.adic_basis.to_subgroups_basis.to_ring_filter_basis.to_add_group_filter_basis
-      .nhds_zero_has_basis.mem_iff,
+  rw I.ring_filter_basis.to_add_group_filter_basis.nhds_zero_has_basis.mem_iff,
   split,
   { rintros ⟨-, ⟨i, rfl⟩, h⟩,
+    replace h : ↑(I ^ i) ⊆ U := by simpa using h,
     use [i, trivial, h] },
   { rintros ⟨i, -, h⟩,
-    use [(I^i : ideal R), i, rfl, h] }
+    exact ⟨(I^i : ideal R), ⟨i, by simp⟩, h⟩ }
 end⟩
+
+lemma has_basis_nhds_adic (I : ideal R) (x : R) :
+  has_basis (@nhds R I.adic_topology x) (λ n : ℕ, true) (λ n, (λ y, x + y) '' (I^n : ideal R)) :=
+begin
+  letI := I.adic_topology,
+  have := I.has_basis_nhds_zero_adic.map (λ y, x + y),
+  rwa map_add_left_nhds_zero x at this
+end
+
+variables (I : ideal R) (M : Type*) [add_comm_group M] [module R M]
+
+lemma adic_module_basis  :
+  I.ring_filter_basis.submodules_basis (λ n : ℕ, (I^n) • (⊤ : submodule R M)) :=
+{ inter := λ i j, ⟨max i j, le_inf_iff.mpr ⟨smul_mono_left $ pow_le_pow (le_max_left i j),
+                                            smul_mono_left $ pow_le_pow (le_max_right i j)⟩⟩,
+  smul := λ m i, ⟨(I^i • ⊤ : ideal R), ⟨i, rfl⟩,
+                  λ a a_in, by { replace a_in : a ∈ I^i := by simpa [(I^i).mul_top] using a_in,
+                                 exact smul_mem_smul a_in mem_top }⟩ }
+
+/-- The topology on a `R`-module `M` associated to an ideal `M`. Submodules $I^n M$,
+written `I^n • ⊤` form a basis of neighborhoods of zero. -/
+def adic_module_topology : topological_space M :=
+  @module_filter_basis.topology R M _ I.adic_basis.topology _ _
+  (I.ring_filter_basis.module_filter_basis (I.adic_module_basis M))
+
+/-- The elements of the basis of neighborhoods of zero for the `I`-adic topology
+on a `R`-module `M`, seen as open additive subgroups of `M`. -/
+def open_add_subgroup (n : ℕ) : @open_add_subgroup R _ I.adic_topology :=
+{ is_open' := begin
+    letI := I.adic_topology,
+    convert (I.adic_basis.to_ring_subgroups_basis.open_add_subgroup n).is_open,
+    simp
+  end,
+  ..(I^n).to_add_subgroup}
 
 end ideal
 
@@ -106,13 +148,13 @@ begin
     letI := J.adic_topology,
     split,
     { intro n,
-      exact (J.adic_basis.to_subgroups_basis.open_add_subgroup n).is_open' },
+      exact (J.open_add_subgroup n).is_open' },
     { intros s hs,
       simpa using J.has_basis_nhds_zero_adic.mem_iff.mp hs } },
   { rintro ⟨H₁, H₂⟩,
     apply topological_add_group.ext,
     { apply @topological_ring.to_topological_add_group },
-    { apply (subgroups_basis.to_ring_filter_basis _).to_add_group_filter_basis
+    { apply (ring_subgroups_basis.to_ring_filter_basis _).to_add_group_filter_basis
              .is_topological_add_group },
     { ext s,
       letI := ideal.adic_basis J,
@@ -161,20 +203,39 @@ end
 
 end is_adic
 
-/-- The `R` is equipped with a preferred ideal. -/
+/-- The ring `R` is equipped with a preferred ideal. -/
 class with_ideal (R : Type*) [comm_ring R] :=
 (I : ideal R)
 
 namespace with_ideal
 
-variables [with_ideal R]
+variables (R) [with_ideal R]
 
 @[priority 100] instance : topological_space R := I.adic_topology
 
-@[priority 100] instance : topological_ring R :=
-ring_filter_basis.is_topological_ring _
+/-- The adic topology on a `R` module coming from the ideal `with_ideal.I`.
+This cannot be an instance because `R` cannot be inferred from `M`. -/
+def topological_space_module (M : Type*) [add_comm_group M] [module R M] :
+  topological_space M := (I : ideal R).adic_module_topology M
 
-@[priority 100] instance : nonarchimedean_ring R :=
-I.nonarchimedean
+/-
+The next examples are kept to make sure potential future refactors won't break the instance
+chaining.
+-/
+
+example : nonarchimedean_ring R :=
+by apply_instance
+
+example (M : Type*) [add_comm_group M] [module R M] :
+  @topological_add_group M (with_ideal.topological_space_module R M) _:=
+by apply_instance
+
+example (M : Type*) [add_comm_group M] [module R M] :
+  @has_continuous_smul R M _ _ (with_ideal.topological_space_module R M) :=
+by apply_instance
+
+example (M : Type*) [add_comm_group M] [module R M] :
+  @nonarchimedean_add_group M _ (with_ideal.topological_space_module R M) :=
+by apply_instance
 
 end with_ideal
