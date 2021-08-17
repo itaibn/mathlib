@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro, Keeley Hoek, Simon Hudon, Scott Morrison
 -/
 import data.option.defs
-import tactic.lint
+
 /-! # Monadic lazy lists.
 
 An alternative construction of lazy lists (see also `data.lazy_list`),
