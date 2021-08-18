@@ -813,7 +813,7 @@ Sup_inf_Sup
 
 lemma bUnion_Union (s : ι → set α) (t : α → set β) :
   (⋃ x ∈ ⋃ i, s i, t x) = ⋃ i (x ∈ s i), t x :=
-by simpa [Union] using supr_comm
+by simp [@Union_comm _ ι]
 
 /-- If `S` is a set of sets, and each `s ∈ S` can be represented as an intersection
 of sets `T s hs`, then `⋂₀ S` is the intersection of the union of all `T s hs`. -/
@@ -873,18 +873,11 @@ end
 
 lemma union_distrib_Inter_right {ι : Type*} (s : ι → set α) (t : set α) :
   (⋂ i, s i) ∪ t = (⋂ i, s i ∪ t) :=
-begin
-  ext x,
-  rw [mem_union_eq, mem_Inter],
-  split; finish
-end
+infi_sup_eq _ _
 
 lemma union_distrib_Inter_left {ι : Type*} (s : ι → set α) (t : set α) :
   t ∪ (⋂ i, s i) = (⋂ i, t ∪ s i) :=
-begin
-  rw [union_comm, union_distrib_Inter_right],
-  simp [union_comm]
-end
+sup_infi_eq _ _
 
 lemma union_distrib_bInter_left {ι : Type*} (s : ι → set α) (u : set ι) (t : set α) :
     t ∪ (⋂ i ∈ u, s i) = ⋂ i ∈ u, t ∪ s i :=
@@ -1065,9 +1058,8 @@ section image
 
 lemma image_Union {f : α → β} {s : ι → set α} : f '' (⋃ i, s i) = (⋃ i, f '' s i) :=
 begin
-  apply set.ext, intro x,
-  simp [image, exists_and_distrib_right.symm, -exists_and_distrib_right],
-  exact exists_swap
+  ext1 x,
+  simp [image, ← exists_and_distrib_right, @exists_swap α]
 end
 
 lemma image_bUnion {f : α → β} {s : ι → set α} {p : ι → Prop} :
