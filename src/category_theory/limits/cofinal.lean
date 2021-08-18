@@ -161,7 +161,7 @@ end
 
 variables {H : Dᵒᵖ ⥤ E}
 
-/-- An auxilliary construction for `extend_cone`, moving `op` around. -/
+/-- An auxiliary construction for `extend_cone`, moving `op` around. -/
 @[simps]
 def extend_cone_cone_to_cocone {F : C ⥤ D} {H : Dᵒᵖ ⥤ E} (c : cone (F.op ⋙ H)) :
   cocone (F ⋙ H.right_op) :=
@@ -169,9 +169,9 @@ def extend_cone_cone_to_cocone {F : C ⥤ D} {H : Dᵒᵖ ⥤ E} (c : cone (F.op
   ι :=
   { app := λ j, (c.π.app (op j)).op,
     naturality' := λ j j' f,
-    begin apply has_hom.hom.unop_inj, dsimp, simp only [category.id_comp], exact c.w f.op, end }}
+    begin apply quiver.hom.unop_inj, dsimp, simp only [category.id_comp], exact c.w f.op, end }}
 
-/-- An auxilliary construction for `extend_cone`, moving `op` around. -/
+/-- An auxiliary construction for `extend_cone`, moving `op` around. -/
 @[simps]
 def extend_cone_cocone_to_cone (c : cocone H.right_op) : cone H :=
 { X := unop c.X,
@@ -179,7 +179,7 @@ def extend_cone_cocone_to_cone (c : cocone H.right_op) : cone H :=
   { app := λ j, (c.ι.app (unop j)).unop,
     naturality' := λ j j' f,
     begin
-      apply has_hom.hom.op_inj,
+      apply quiver.hom.op_inj,
       dsimp,
       simp only [category.comp_id],
       exact (c.w f.unop).symm,
@@ -198,7 +198,7 @@ lemma limit_cone_comp_aux (s : cone (F.op ⋙ H)) (j : Cᵒᵖ) :
   s.π.app (op (lift F (F.obj (unop j)))) ≫ H.map (hom_to_lift F (F.obj (unop j))).op =
     s.π.app j :=
 begin
-  apply has_hom.hom.op_inj,
+  apply quiver.hom.op_inj,
   exact colimit_cocone_comp_aux (extend_cone_cone_to_cocone s) (unop j)
 end
 
@@ -445,7 +445,7 @@ If `colimit (F ⋙ coyoneda.obj (op d)) ≅ punit` for all `d : D`, then `F` is 
 lemma cofinal_of_colimit_comp_coyoneda_iso_punit
   (I : Π d, colimit (F ⋙ coyoneda.obj (op d)) ≅ punit) : cofinal F :=
 ⟨λ d, begin
-  haveI : nonempty (structured_arrow d F) := by
+  haveI : nonempty (structured_arrow d F),
   { have := (I d).inv punit.star,
     obtain ⟨j, y, rfl⟩ := limits.types.jointly_surjective' this,
     exact ⟨structured_arrow.mk y⟩, },

@@ -3,9 +3,6 @@ Copyright (c) 2020 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon, Patrick Massot, Yury Kudryashov
 -/
-import algebra.group.hom
-import data.equiv.mul_add
-import data.prod
 import algebra.opposites
 
 /-!
@@ -84,6 +81,9 @@ instance [mul_zero_class M] [mul_zero_class N] : mul_zero_class (M × N) :=
 instance [semigroup M] [semigroup N] : semigroup (M × N) :=
 { mul_assoc := assume a b c, mk.inj_iff.mpr ⟨mul_assoc _ _ _, mul_assoc _ _ _⟩,
   .. prod.has_mul }
+
+instance [semigroup_with_zero M] [semigroup_with_zero N] : semigroup_with_zero (M × N) :=
+{ .. prod.mul_zero_class, .. prod.semigroup }
 
 @[to_additive]
 instance [mul_one_class M] [mul_one_class N] : mul_one_class (M × N) :=

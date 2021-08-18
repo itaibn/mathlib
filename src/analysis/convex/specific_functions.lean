@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov, Sébastien Gouëzel
 -/
 import analysis.calculus.mean_value
-import data.nat.parity
 import analysis.special_functions.pow
 
 /-!
@@ -37,7 +36,7 @@ begin
   { intro x,
     rcases nat.even.sub_even hn (nat.even_bit0 1) with ⟨k, hk⟩,
     simp only [iter_deriv_pow, finset.prod_range_succ, finset.prod_range_zero, nat.sub_zero,
-      mul_one, hk, pow_mul', pow_two],
+      mul_one, hk, pow_mul', sq],
     exact mul_nonneg (nat.cast_nonneg _) (mul_self_nonneg _) }
 end
 
@@ -102,9 +101,8 @@ lemma convex_on_rpow {p : ℝ} (hp : 1 ≤ p) : convex_on (Ici 0) (λ x : ℝ, x
 begin
   have A : deriv (λ (x : ℝ), x ^ p) = λ x, p * x^(p-1), by { ext x, simp [hp] },
   apply convex_on_of_deriv2_nonneg (convex_Ici 0),
-  { apply (continuous_rpow_of_pos (λ _, lt_of_lt_of_le zero_lt_one hp)
-      continuous_id continuous_const).continuous_on },
-  { apply differentiable.differentiable_on, simp [hp] },
+  { exact continuous_on_id.rpow_const (λ x _, or.inr (zero_le_one.trans hp)) },
+  { exact (differentiable_rpow_const hp).differentiable_on },
   { rw A,
     assume x hx,
     replace hx : x ≠ 0, by { simp at hx, exact ne_of_gt hx },
@@ -131,7 +129,7 @@ begin
     rw [function.iterate_succ, function.iterate_one],
     change (deriv (deriv log)) x ≤ 0,
     rw [deriv_log', deriv_inv (show x ≠ 0, by {rintro rfl, exact lt_irrefl 0 hx})],
-    exact neg_nonpos.mpr (inv_nonneg.mpr (pow_two_nonneg x)) }
+    exact neg_nonpos.mpr (inv_nonneg.mpr (sq_nonneg x)) }
 end
 
 lemma concave_on_log_Iio : concave_on (Iio 0) log :=
@@ -149,5 +147,5 @@ begin
     rw [function.iterate_succ, function.iterate_one],
     change (deriv (deriv log)) x ≤ 0,
     rw [deriv_log', deriv_inv (show x ≠ 0, by {rintro rfl, exact lt_irrefl 0 hx})],
-    exact neg_nonpos.mpr (inv_nonneg.mpr (pow_two_nonneg x)) }
+    exact neg_nonpos.mpr (inv_nonneg.mpr (sq_nonneg x)) }
 end

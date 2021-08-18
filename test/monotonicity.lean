@@ -6,7 +6,7 @@ Authors: Simon Hudon
 import tactic.monotonicity
 import tactic.norm_num
 import algebra.ordered_ring
-import measure_theory.lebesgue_measure
+import measure_theory.measure.lebesgue
 import data.list.defs
 
 open list tactic tactic.interactive set
@@ -423,8 +423,9 @@ end
 example : ∫ x in Icc 0 1, real.exp x ≤ ∫ x in Icc 0 1, real.exp (x+1) :=
 begin
   mono,
-  { exact real.continuous_exp.integrable_on_compact compact_Icc },
-  { exact (real.continuous_exp.comp $ continuous_add_right 1).integrable_on_compact compact_Icc },
+  { exact real.continuous_exp.integrable_on_compact is_compact_Icc },
+  { exact (real.continuous_exp.comp $ continuous_add_right 1).integrable_on_compact
+      is_compact_Icc },
   intro x,
   dsimp only,
   mono,
