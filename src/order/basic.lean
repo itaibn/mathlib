@@ -438,6 +438,16 @@ lemma update_le_iff {ι : Type u} {α : ι → Type v} [∀ i, preorder (α i)] 
   function.update x i a ≤ y ↔ a ≤ y i ∧ ∀ j ≠ i, x j ≤ y j :=
 function.forall_update_iff _ (λ j z, z ≤ y j)
 
+lemma forall_lt_update_iff {ι : Type u} {α : ι → Type v} [∀ i, has_lt (α i)] [decidable_eq ι]
+  {x y : Π i, α i} {i : ι} {a : α i} :
+  (∀ j, x j < function.update y i a j) ↔ x i < a ∧ ∀ j ≠ i, x j < y j :=
+function.forall_update_iff _ (λ j z, x j < z)
+
+lemma forall_update_lt_iff {ι : Type u} {α : ι → Type v} [∀ i, has_lt (α i)] [decidable_eq ι]
+  {x y : Π i, α i} {i : ι} {a : α i} :
+  (∀ j, function.update y i a j < x j) ↔ a < x i ∧ ∀ j ≠ i, y j < x j :=
+function.forall_update_iff _ (λ j z, z < x j)
+
 lemma update_le_update_iff {ι : Type u} {α : ι → Type v} [∀ i, preorder (α i)] [decidable_eq ι]
   {x y : Π i, α i} {i : ι} {a b : α i} :
   function.update x i a ≤ function.update y i b ↔ a ≤ b ∧ ∀ j ≠ i, x j ≤ y j :=

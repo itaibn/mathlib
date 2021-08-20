@@ -365,6 +365,9 @@ variables {s : ι → set α}
 @[simp] lemma nonempty_Union : (⋃ i, s i).nonempty ↔ ∃ i, (s i).nonempty :=
 by simp [← ne_empty_iff_nonempty]
 
+lemma Union_nonempty (s : set α) (t : s.nonempty → set β) : (⋃ h, t h) = ⋃ x ∈ s, t ⟨x, ‹_›⟩ :=
+supr_exists
+
 end
 
 @[simp] theorem Inter_Inter_eq_left {b : β} {s : Π x : β, x = b → set α} :
@@ -528,6 +531,12 @@ infi_emptyset
 
 theorem bInter_univ (u : α → set β) : (⋂ x ∈ @univ α, u x) = ⋂ x, u x :=
 infi_univ
+
+@[simp] lemma bUnion_self (s : set α) : (⋃ x ∈ s, s) = s :=
+subset.antisymm (bUnion_subset $ λ x hx, subset.refl s) (λ x hx, mem_bUnion hx hx)
+
+@[simp] lemma Union_nonempty_self (s : set α) : (⋃ h : s.nonempty, s) = s :=
+by rw [Union_nonempty, bUnion_self]
 
 -- TODO(Jeremy): here is an artifact of the encoding of bounded intersection:
 -- without dsimp, the next theorem fails to type check, because there is a lambda

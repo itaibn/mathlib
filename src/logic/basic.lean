@@ -230,6 +230,13 @@ iff_true_intro $ λ_, trivial
 theorem imp_iff_right (ha : a) : (a → b) ↔ b :=
 ⟨λf, f ha, imp_intro⟩
 
+theorem decidable.imp_iff_right_iff [decidable a] : ((a → b) ↔ b) ↔ (a ∨ b) :=
+⟨λ H, (decidable.em a).imp_right $ λ ha', H.1 $ λ ha, (ha' ha).elim,
+  λ H, H.elim imp_iff_right $ λ hb, ⟨λ hab, hb, λ _ _, hb⟩⟩
+
+@[simp] theorem imp_iff_right_iff : ((a → b) ↔ b) ↔ (a ∨ b) :=
+decidable.imp_iff_right_iff
+
 /-! ### Declarations about `not` -/
 
 /-- Ex falso for negation. From `¬ a` and `a` anything follows. This is the same as `absurd` with
@@ -903,6 +910,10 @@ by simp [and_comm]
 
 @[simp] theorem forall_eq' {a' : α} : (∀a, a' = a → p a) ↔ p a' :=
 by simp [@eq_comm _ a']
+
+theorem and_forall_ne {a : α} : (p a ∧ ∀ b ≠ a, p b) ↔ ∀ b, p b :=
+by simp only [← @forall_eq _ p a, ← forall_and_distrib, ← or_imp_distrib, classical.em,
+  forall_const]
 
 -- this lemma is needed to simplify the output of `list.mem_cons_iff`
 @[simp] theorem forall_eq_or_imp {a' : α} : (∀ a, a = a' ∨ q a → p a) ↔ p a' ∧ ∀ a, q a → p a :=
