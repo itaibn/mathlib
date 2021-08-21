@@ -52,12 +52,25 @@ begin
       (@le_update_iff _ _ _ _ g g i _).2 ⟨subset_insert _ _, λ _ _, le_rfl⟩] }
 end
 
+/-- Given a predicate on functions `Π i, finset (α i)` defined on a finite type, it is true on all
+maps provided that it is true on `λ _, ∅` and for any function `g : Π i, finset (α i)`, an index
+`i : ι`, and `x ∉ g i`, `p g` implies `p (update g i (insert x (g i)))`.
+
+See also `finset.induction_on_pi_max` and `finset.induction_on_pi_min` for specialized versions
+that require `Π i, linear_order (α i)`.  -/
 lemma induction_on_pi {p : (Π i, finset (α i)) → Prop} (f : Π i, finset (α i)) (h0 : p (λ _, ∅))
   (step : ∀ (g : Π i, finset (α i)) (i : ι) (x : α i) (hx : x ∉ g i),
     p g → p (update g i (insert x (g i)))) :
   p f :=
 induction_on_pi_of_choice (λ i x s, x ∉ s) (λ i s ⟨x, hx⟩, ⟨x, hx, not_mem_erase x s⟩) f h0 step
 
+/-- Given a predicate on functions `Π i, finset (α i)` defined on a finite type, it is true on all
+maps provided that it is true on `λ _, ∅` and for any function `g : Π i, finset (α i)`, an index
+`i : ι`, and an element`x : α i` that is strictly greater than all elements of `g i`, `p g` implies
+`p (update g i (insert x (g i)))`.
+
+This lemma requires `linear_order` instances on all `α i`. See also `finset.induction_on_pi` for a
+version that `x ∉ g i` instead of ` does not need `Π i, linear_order (α i)`. -/
 lemma induction_on_pi_max [Π i, linear_order (α i)] {p : (Π i, finset (α i)) → Prop}
   (f : Π i, finset (α i)) (h0 : p (λ _, ∅))
   (step : ∀ (g : Π i, finset (α i)) (i : ι) (x : α i),
@@ -66,6 +79,13 @@ lemma induction_on_pi_max [Π i, linear_order (α i)] {p : (Π i, finset (α i))
 induction_on_pi_of_choice (λ i x s, ∀ y ∈ s, y < x)
   (λ i s hs, ⟨s.max' hs, s.max'_mem hs, λ y, s.lt_max'_of_mem_erase_max' _⟩) f h0 step
 
+/-- Given a predicate on functions `Π i, finset (α i)` defined on a finite type, it is true on all
+maps provided that it is true on `λ _, ∅` and for any function `g : Π i, finset (α i)`, an index
+`i : ι`, and an element`x : α i` that is strictly less than all elements of `g i`, `p g` implies
+`p (update g i (insert x (g i)))`.
+
+This lemma requires `linear_order` instances on all `α i`. See also `finset.induction_on_pi` for a
+version that `x ∉ g i` instead of ` does not need `Π i, linear_order (α i)`. -/
 lemma induction_on_pi_min [Π i, linear_order (α i)] {p : (Π i, finset (α i)) → Prop}
   (f : Π i, finset (α i)) (h0 : p (λ _, ∅))
   (step : ∀ (g : Π i, finset (α i)) (i : ι) (x : α i),
