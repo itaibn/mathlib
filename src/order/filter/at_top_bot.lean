@@ -302,7 +302,6 @@ lemma exists_lt_of_tendsto_at_bot [semilattice_sup α] [preorder β] [no_bot_ord
   {u : α → β} (h : tendsto u at_top at_bot) : ∀ a b, ∃ a' ≥ a, u a' < b :=
 @exists_lt_of_tendsto_at_top _ (order_dual β) _ _ _ _ h
 
-
 /--
 If `u` is a sequence which is unbounded above,
 then after any point, it reaches a value strictly greater than all previous values.
