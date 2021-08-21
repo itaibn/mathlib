@@ -1,4 +1,26 @@
+/-
+Copyright (c) 2021 Yury Kudryashov. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Author: Yury Kudryashov
+-/
 import data.fintype.basic
+
+/-!
+# Induction principles for `Π i, finset (α i)`
+
+In this file we prove a few induction principles for functions `Π i : ι, finset (α i)` defined on a
+finite type.
+
+* `finset.induction_on_pi` is a generic lemma that requires only `[fintype ι]`, `[decidable_eq ι]`,
+  and `[Π i, decidable_eq (α i)]`; this version can be seen as a direct generalization of
+  `finset.induction_on`.
+
+* `finset.induction_on_pi_max` and `finset.induction_on_pi_min`: generalizations of
+  `finset.induction_on_max`; these versions require `Π i, linear_order (α i)` but assume `∀ y ∈ g i, y < x` and `∀ y ∈ g i, x < y` respectively in the induction step.
+
+## Tags
+finite set, finite type, induction, function
+-/
 
 open function
 
@@ -6,6 +28,7 @@ variables {ι : Type*} {α : ι → Type*} [fintype ι] [decidable_eq ι] [Π i,
 
 namespace finset
 
+/-- General theorem for `finset.induction_on_pi`-style induction principles. -/
 lemma induction_on_pi_of_choice (r : Π i, α i → finset (α i) → Prop)
   (H_ex : ∀ i (s : finset (α i)) (hs : s.nonempty), ∃ x ∈ s, r i x (s.erase x))
   {p : (Π i, finset (α i)) → Prop} (f : Π i, finset (α i)) (h0 : p (λ _, ∅))
