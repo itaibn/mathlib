@@ -25,7 +25,7 @@ variables {α : Type u} {β : Type v} {γ : Type w}
 instance : metric_space ℚ :=
 metric_space.induced coe rat.cast_injective real.metric_space
 
-theorem rat.dist_eq (x y : ℚ) : dist x y = abs (x - y) := rfl
+theorem rat.dist_eq (x y : ℚ) : dist x y = |x - y| := rfl
 
 @[norm_cast, simp] lemma rat.dist_cast (x y : ℚ) : dist (x : ℝ) y = dist x y := rfl
 
@@ -37,7 +37,7 @@ lemma uniform_embedding_coe_real : uniform_embedding (coe : ℤ → ℝ) :=
       refine le_antisymm (le_principal_iff.2 _) (@refl_le_uniformity ℤ $
         uniform_space.comap coe (infer_instance : uniform_space ℝ)),
       refine (uniformity_basis_dist.comap _).mem_iff.2 ⟨1, zero_lt_one, _⟩,
-      rintro ⟨a, b⟩ (h : abs (a - b : ℝ) < 1),
+      rintro ⟨a, b⟩ (h : |(a - b : ℝ)| < 1),
       norm_cast at h,
       erw [@int.lt_add_one_iff _ 0, abs_nonpos_iff, sub_eq_zero] at h, assumption
     end,
@@ -45,7 +45,7 @@ lemma uniform_embedding_coe_real : uniform_embedding (coe : ℤ → ℝ) :=
 
 instance : metric_space ℤ := int.uniform_embedding_coe_real.comap_metric_space _
 
-theorem dist_eq (x y : ℤ) : dist x y = abs (x - y) := rfl
+theorem dist_eq (x y : ℤ) : dist x y = |x - y| := rfl
 
 @[norm_cast, simp] theorem dist_cast_real (x y : ℤ) : dist (x : ℝ) y = dist x y := rfl
 
@@ -91,7 +91,7 @@ theorem continuous_of_rat : continuous (coe : ℚ → ℝ) := uniform_continuous
 
 theorem real.uniform_continuous_add : uniform_continuous (λp : ℝ × ℝ, p.1 + p.2) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
-let ⟨δ, δ0, Hδ⟩ := rat_add_continuous_lemma abs ε0 in
+let ⟨δ, δ0, Hδ⟩ := rat_add_continuous_lemma has_abs.abs ε0 in
 ⟨δ, δ0, λ a b h, let ⟨h₁, h₂⟩ := max_lt_iff.1 h in Hδ h₁ h₂⟩
 
 -- TODO(Mario): Find a way to use rat_add_continuous_lemma
@@ -146,20 +146,20 @@ lemma uniform_embedding_mul_rat {q : ℚ} (hq : q ≠ 0) : uniform_embedding ((*
 _ -/
 
 lemma real.mem_closure_iff {s : set ℝ} {x : ℝ} :
-  x ∈ closure s ↔ ∀ ε > 0, ∃ y ∈ s, abs (y - x) < ε :=
+  x ∈ closure s ↔ ∀ ε > 0, ∃ y ∈ s, |y - x| < ε :=
 by simp [mem_closure_iff_nhds_basis nhds_basis_ball, real.dist_eq]
 
-lemma real.uniform_continuous_inv (s : set ℝ) {r : ℝ} (r0 : 0 < r) (H : ∀ x ∈ s, r ≤ abs x) :
+lemma real.uniform_continuous_inv (s : set ℝ) {r : ℝ} (r0 : 0 < r) (H : ∀ x ∈ s, r ≤ |x|) :
   uniform_continuous (λp:s, p.1⁻¹) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
-let ⟨δ, δ0, Hδ⟩ := rat_inv_continuous_lemma abs ε0 r0 in
+let ⟨δ, δ0, Hδ⟩ := rat_inv_continuous_lemma has_abs.abs ε0 r0 in
 ⟨δ, δ0, λ a b h, Hδ (H _ a.2) (H _ b.2) h⟩
 
-lemma real.uniform_continuous_abs : uniform_continuous (abs : ℝ → ℝ) :=
+lemma real.uniform_continuous_abs : uniform_continuous (has_abs.abs : ℝ → ℝ) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
   ⟨ε, ε0, λ a b, lt_of_le_of_lt (abs_abs_sub_abs_le_abs_sub _ _)⟩
 
-lemma rat.uniform_continuous_abs : uniform_continuous (abs : ℚ → ℚ) :=
+lemma rat.uniform_continuous_abs : uniform_continuous (has_abs.abs : ℚ → ℚ) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
   ⟨ε, ε0, λ a b h, lt_of_le_of_lt
     (by simpa [rat.dist_eq] using abs_abs_sub_abs_le_abs_sub _ _) h⟩
@@ -167,8 +167,8 @@ metric.uniform_continuous_iff.2 $ λ ε ε0,
 lemma real.tendsto_inv {r : ℝ} (r0 : r ≠ 0) : tendsto (λq, q⁻¹) (𝓝 r) (𝓝 r⁻¹) :=
 by rw ← abs_pos at r0; exact
 tendsto_of_uniform_continuous_subtype
-  (real.uniform_continuous_inv {x | abs r / 2 < abs x} (half_pos r0) (λ x h, le_of_lt h))
-  (is_open.mem_nhds ((is_open_lt' (abs r / 2)).preimage continuous_abs) (half_lt_self r0))
+  (real.uniform_continuous_inv {x | |r| / 2 < |x|} (half_pos r0) (λ x h, le_of_lt h))
+  (is_open.mem_nhds ((is_open_lt' (|r| / 2)).preimage continuous_abs) (half_lt_self r0))
 
 lemma real.continuous_inv : continuous (λa:{r:ℝ // r ≠ 0}, a.val⁻¹) :=
 continuous_iff_continuous_at.mpr $ assume ⟨r, hr⟩,
@@ -181,7 +181,7 @@ show continuous ((has_inv.inv ∘ @subtype.val ℝ (λr, r ≠ 0)) ∘ λa, ⟨f
 
 lemma real.uniform_continuous_mul_const {x : ℝ} : uniform_continuous ((*) x) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0, begin
-  cases no_top (abs x) with y xy,
+  cases no_top (|x|) with y xy,
   have y0 := lt_of_le_of_lt (abs_nonneg _) xy,
   refine ⟨_, div_pos ε0 y0, λ a b h, _⟩,
   rw [real.dist_eq, ← mul_sub, abs_mul, ← mul_div_cancel' ε (ne_of_gt y0)],
@@ -189,10 +189,10 @@ metric.uniform_continuous_iff.2 $ λ ε ε0, begin
 end
 
 lemma real.uniform_continuous_mul (s : set (ℝ × ℝ))
-  {r₁ r₂ : ℝ} (H : ∀ x ∈ s, abs (x : ℝ × ℝ).1 < r₁ ∧ abs x.2 < r₂) :
+  {r₁ r₂ : ℝ} (H : ∀ x ∈ s, |(x : ℝ × ℝ).1| < r₁ ∧ |x.2| < r₂) :
   uniform_continuous (λp:s, p.1.1 * p.1.2) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
-let ⟨δ, δ0, Hδ⟩ := rat_mul_continuous_lemma abs ε0 in
+let ⟨δ, δ0, Hδ⟩ := rat_mul_continuous_lemma has_abs.abs ε0 in
 ⟨δ, δ0, λ a b h,
   let ⟨h₁, h₂⟩ := max_lt_iff.1 h in Hδ (H _ a.2).1 (H _ b.2).2 h₁ h₂⟩
 
@@ -200,12 +200,12 @@ protected lemma real.continuous_mul : continuous (λp : ℝ × ℝ, p.1 * p.2) :
 continuous_iff_continuous_at.2 $ λ ⟨a₁, a₂⟩,
 tendsto_of_uniform_continuous_subtype
   (real.uniform_continuous_mul
-    ({x | abs x < abs a₁ + 1}.prod {x | abs x < abs a₂ + 1})
+    ({x | |x| < |a₁| + 1}.prod {x | |x| < |a₂| + 1})
     (λ x, id))
   (is_open.mem_nhds
-    (((is_open_gt' (abs a₁ + 1)).preimage continuous_abs).prod
-      ((is_open_gt' (abs a₂ + 1)).preimage continuous_abs ))
-    ⟨lt_add_one (abs a₁), lt_add_one (abs a₂)⟩)
+    (((is_open_gt' (|a₁| + 1)).preimage continuous_abs).prod
+      ((is_open_gt' (|a₂| + 1)).preimage continuous_abs ))
+    ⟨lt_add_one (|a₁|), lt_add_one (|a₂|)⟩)
 
 instance : topological_ring ℝ :=
 { continuous_mul := real.continuous_mul, ..real.topological_add_group }
@@ -231,7 +231,7 @@ instance : complete_space ℝ :=
 begin
   apply complete_of_cauchy_seq_tendsto,
   intros u hu,
-  let c : cau_seq ℝ abs := ⟨u, metric.cauchy_seq_iff'.1 hu⟩,
+  let c : cau_seq ℝ has_abs.abs := ⟨u, metric.cauchy_seq_iff'.1 hu⟩,
   refine ⟨c.lim, λ s h, _⟩,
   rcases metric.mem_nhds_iff.1 h with ⟨ε, ε0, hε⟩,
   have := c.equiv_lim ε ε0,
@@ -257,7 +257,7 @@ subset.antisymm
 λ x hx, mem_closure_iff_nhds.2 $ λ t ht,
 let ⟨ε, ε0, hε⟩ := metric.mem_nhds_iff.1 ht in
 let ⟨p, h₁, h₂⟩ := exists_rat_btwn ((lt_add_iff_pos_right x).2 ε0) in
-⟨_, hε (show abs _ < _,
+⟨_, hε (show has_abs.abs _ < _,
     by rwa [abs_of_nonneg (le_of_lt $ sub_pos.2 h₁), sub_lt_iff_lt_add']),
   p, rat.cast_lt.1 (@lt_of_le_of_lt ℝ _ _ _ _ hx h₁), rfl⟩
 
@@ -339,7 +339,7 @@ begin
   let G_pos := {g : ℝ | g ∈ G ∧ 0 < g},
   push_neg at H',
   intros x,
-  suffices : ∀ ε > (0 : ℝ), ∃ g ∈ G, abs (x - g) < ε,
+  suffices : ∀ ε > (0 : ℝ), ∃ g ∈ G, |x - g| < ε,
     by simpa only [real.mem_closure_iff, abs_sub_comm],
   intros ε ε_pos,
   obtain ⟨g₁, g₁_in, g₁_pos⟩ : ∃ g₁ : ℝ, g₁ ∈ G ∧ 0 < g₁,

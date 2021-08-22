@@ -84,11 +84,11 @@ The assumption on `K` could be weakened to `linear_ordered_comm_ring` assuming t
 image of the denominator is invertible in `K`. -/
 lemma one_le_pow_mul_abs_eval_div {K : Type*} [linear_ordered_field K] {f : polynomial ℤ}
   {a b : ℤ} (b0 : 0 < b) (fab : eval ((a : K) / b) (f.map (algebra_map ℤ K)) ≠ 0) :
-  (1 : K) ≤ b ^ f.nat_degree * abs (eval ((a : K) / b) (f.map (algebra_map ℤ K))) :=
+  (1 : K) ≤ b ^ f.nat_degree * |eval ((a : K) / b) (f.map (algebra_map ℤ K))| :=
 begin
   obtain ⟨ev, bi, bu, hF⟩ := @denoms_clearable_nat_degree _ _ _ _ b _ (algebra_map ℤ K)
     f a (by { rw [eq_int_cast, one_div_mul_cancel], rw [int.cast_ne_zero], exact (b0.ne.symm) }),
-  obtain Fa := congr_arg abs hF,
+  obtain Fa := congr_arg has_abs.abs hF,
   rw [eq_one_div_of_mul_eq_one_left bu, eq_int_cast, eq_int_cast, abs_mul] at Fa,
   rw [abs_of_pos (pow_pos (int.cast_pos.mpr b0) _ : 0 < (b : K) ^ _), one_div, eq_int_cast] at Fa,
   rw [div_eq_mul_inv, ← Fa, ← int.cast_abs, ← int.cast_one, int.cast_le],

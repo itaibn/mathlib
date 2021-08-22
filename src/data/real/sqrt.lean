@@ -84,11 +84,11 @@ namespace real
 
 /-- An auxiliary sequence of rational numbers that converges to `real.sqrt (mk f)`.
 Currently this sequence is not used in `mathlib`.  -/
-def sqrt_aux (f : cau_seq ℚ abs) : ℕ → ℚ
+def sqrt_aux (f : cau_seq ℚ has_abs.abs) : ℕ → ℚ
 | 0       := rat.mk_nat (f 0).num.to_nat.sqrt (f 0).denom.sqrt
 | (n + 1) := let s := sqrt_aux n in max 0 $ (s + f (n+1) / s) / 2
 
-theorem sqrt_aux_nonneg (f : cau_seq ℚ abs) : ∀ i : ℕ, 0 ≤ sqrt_aux f i
+theorem sqrt_aux_nonneg (f : cau_seq ℚ has_abs.abs) : ∀ i : ℕ, 0 ≤ sqrt_aux f i
 | 0       := by rw [sqrt_aux, rat.mk_nat_eq, rat.mk_eq_div];
   apply div_nonneg; exact int.cast_nonneg.2 (int.of_nat_nonneg _)
 | (n + 1) := le_max_left _ _
@@ -151,10 +151,10 @@ theorem sqrt_eq_iff_sq_eq (hx : 0 ≤ x) (hy : 0 ≤ y) :
   sqrt x = y ↔ y ^ 2 = x :=
 by rw [sq, sqrt_eq_iff_mul_self_eq hx hy]
 
-theorem sqrt_mul_self_eq_abs (x : ℝ) : sqrt (x * x) = abs x :=
+theorem sqrt_mul_self_eq_abs (x : ℝ) : sqrt (x * x) = |x| :=
 by rw [← abs_mul_abs_self x, sqrt_mul_self (abs_nonneg _)]
 
-theorem sqrt_sq_eq_abs (x : ℝ) : sqrt (x ^ 2) = abs x :=
+theorem sqrt_sq_eq_abs (x : ℝ) : sqrt (x ^ 2) = |x| :=
 by rw [sq, sqrt_mul_self_eq_abs]
 
 @[simp] theorem sqrt_zero : sqrt 0 = 0 := by simp [sqrt]
@@ -189,7 +189,7 @@ theorem le_sqrt' (hx : 0 < x) : x ≤ sqrt y ↔ x ^ 2 ≤ y :=
 by { rw [sqrt, ← nnreal.coe_mk x hx.le, nnreal.coe_le_coe, nnreal.le_sqrt_iff,
   real.le_to_nnreal_iff_coe_le', sq, nnreal.coe_mul], exact mul_pos hx hx }
 
-theorem abs_le_sqrt (h : x^2 ≤ y) : abs x ≤ sqrt y :=
+theorem abs_le_sqrt (h : x^2 ≤ y) : |x| ≤ sqrt y :=
 by rw ← sqrt_sq_eq_abs; exact sqrt_le_sqrt h
 
 theorem sq_le (h : 0 ≤ y) : x^2 ≤ y ↔ -sqrt y ≤ x ∧ x ≤ sqrt y :=

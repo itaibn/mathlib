@@ -211,7 +211,7 @@ by by_cases a ≤ b; simp [h, min]
 by by_cases a ≤ b; simp [h, max]
 
 @[simp, norm_cast] theorem abs_cast [linear_ordered_ring α] (a : ℕ) :
-  abs (a : α) = a :=
+  |(a : α)| = a :=
 abs_of_nonneg (cast_nonneg a)
 
 lemma coe_nat_dvd [comm_semiring α] {m n : ℕ} (h : m ∣ n) :

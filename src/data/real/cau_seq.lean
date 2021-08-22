@@ -28,6 +28,73 @@ sequence, cauchy, abs val, absolute value
 
 open_locale big_operators
 
+/-- A function `f` is an absolute value if it is nonnegative, zero only at 0, additive, and
+multiplicative. -/
+class is_absolute_value {α} [linear_ordered_field α]
+  {β} [ring β] (f : β → α) : Prop :=
+(abv_nonneg [] : ∀ x, 0 ≤ f x)
+(abv_eq_zero [] : ∀ {x}, f x = 0 ↔ x = 0)
+(abv_add [] : ∀ x y, f (x + y) ≤ f x + f y)
+(abv_mul [] : ∀ x y, f (x * y) = f x * f y)
+
+namespace is_absolute_value
+variables {α : Type*} [linear_ordered_field α]
+  {β : Type*} [ring β] (abv : β → α) [is_absolute_value abv]
+
+theorem abv_zero : abv 0 = 0 := (abv_eq_zero abv).2 rfl
+
+theorem abv_one [nontrivial β] : abv 1 = 1 :=
+(mul_right_inj' $ mt (abv_eq_zero abv).1 one_ne_zero).1 $
+by rw [← abv_mul abv, mul_one, mul_one]
+
+theorem abv_pos {a : β} : 0 < abv a ↔ a ≠ 0 :=
+by rw [lt_iff_le_and_ne, ne, eq_comm]; simp [abv_eq_zero abv, abv_nonneg abv]
+
+theorem abv_neg (a : β) : abv (-a) = abv a :=
+by rw [← mul_self_inj_of_nonneg (abv_nonneg abv _) (abv_nonneg abv _),
+  ← abv_mul abv, ← abv_mul abv]; simp
+
+theorem abv_sub (a b : β) : abv (a - b) = abv (b - a) :=
+by rw [← neg_sub, abv_neg abv]
+
+/-- `abv` as a `monoid_with_zero_hom`. -/
+def abv_hom [nontrivial β] : monoid_with_zero_hom β α :=
+⟨abv, abv_zero abv, abv_one abv, abv_mul abv⟩
+
+theorem abv_inv
+  {β : Type*} [field β] (abv : β → α) [is_absolute_value abv]
+  (a : β) : abv a⁻¹ = (abv a)⁻¹ :=
+(abv_hom abv).map_inv' a
+
+theorem abv_div
+  {β : Type*} [field β] (abv : β → α) [is_absolute_value abv]
+  (a b : β) : abv (a / b) = abv a / abv b :=
+(abv_hom abv).map_div a b
+
+lemma abv_sub_le (a b c : β) : abv (a - c) ≤ abv (a - b) + abv (b - c) :=
+by simpa [sub_eq_add_neg, add_assoc] using abv_add abv (a - b) (b - c)
+
+lemma sub_abv_le_abv_sub (a b : β) : abv a - abv b ≤ abv (a - b) :=
+sub_le_iff_le_add.2 $ by simpa using abv_add abv (a - b) b
+
+lemma abs_abv_sub_le_abv_sub (a b : β) :
+  |abv a - abv b| ≤ abv (a - b) :=
+abs_sub_le_iff.2 ⟨sub_abv_le_abv_sub abv _ _,
+  by rw abv_sub abv; apply sub_abv_le_abv_sub abv⟩
+
+lemma abv_pow [nontrivial β] (abv : β → α) [is_absolute_value abv]
+  (a : β) (n : ℕ) : abv (a ^ n) = abv a ^ n :=
+(abv_hom abv).to_monoid_hom.map_pow a n
+
+end is_absolute_value
+
+instance abs_is_absolute_value {α} [linear_ordered_field α] :
+  is_absolute_value (has_abs.abs : α → α) :=
+{ abv_nonneg  := abs_nonneg,
+  abv_eq_zero := λ _, abs_eq_zero,
+  abv_add     := abs_add,
+  abv_mul     := abs_mul }
+
 open is_absolute_value
 
 theorem exists_forall_ge_and {α} [linear_order α] {P Q : α → Prop} :
@@ -448,12 +515,12 @@ ext (assume n, by simp[inv_apply, const_apply])
 end field
 
 section abs
-local notation `const` := const abs
+local notation `const` := const has_abs.abs
 
 /-- The entries of a positive Cauchy sequence eventually have a positive lower bound. -/
-def pos (f : cau_seq α abs) : Prop := ∃ K > 0, ∃ i, ∀ j ≥ i, K ≤ f j
+def pos (f : cau_seq α has_abs.abs) : Prop := ∃ K > 0, ∃ i, ∀ j ≥ i, K ≤ f j
 
-theorem not_lim_zero_of_pos {f : cau_seq α abs} : pos f → ¬ lim_zero f
+theorem not_lim_zero_of_pos {f : cau_seq α has_abs.abs} : pos f → ¬ lim_zero f
 | ⟨F, F0, hF⟩ H :=
   let ⟨i, h⟩ := exists_forall_ge_and hF (H _ F0),
       ⟨h₁, h₂⟩ := h _ (le_refl _) in
@@ -463,13 +530,13 @@ theorem const_pos {x : α} : pos (const x) ↔ 0 < x :=
 ⟨λ ⟨K, K0, i, h⟩, lt_of_lt_of_le K0 (h _ (le_refl _)),
  λ h, ⟨x, h, 0, λ j _, le_refl _⟩⟩
 
-theorem add_pos {f g : cau_seq α abs} : pos f → pos g → pos (f + g)
+theorem add_pos {f g : cau_seq α has_abs.abs} : pos f → pos g → pos (f + g)
 | ⟨F, F0, hF⟩ ⟨G, G0, hG⟩ :=
   let ⟨i, h⟩ := exists_forall_ge_and hF hG in
   ⟨_, _root_.add_pos F0 G0, i,
     λ j ij, let ⟨h₁, h₂⟩ := h _ ij in add_le_add h₁ h₂⟩
 
-theorem pos_add_lim_zero {f g : cau_seq α abs} : pos f → lim_zero g → pos (f + g)
+theorem pos_add_lim_zero {f g : cau_seq α has_abs.abs} : pos f → lim_zero g → pos (f + g)
 | ⟨F, F0, hF⟩ H :=
   let ⟨i, h⟩ := exists_forall_ge_and hF (H _ (half_pos F0)) in
   ⟨_, half_pos F0, i, λ j ij, begin
@@ -478,14 +545,14 @@ theorem pos_add_lim_zero {f g : cau_seq α abs} : pos f → lim_zero g → pos (
     rwa [← sub_eq_add_neg, sub_self_div_two] at this
   end⟩
 
-protected theorem mul_pos {f g : cau_seq α abs} : pos f → pos g → pos (f * g)
+protected theorem mul_pos {f g : cau_seq α has_abs.abs} : pos f → pos g → pos (f * g)
 | ⟨F, F0, hF⟩ ⟨G, G0, hG⟩ :=
   let ⟨i, h⟩ := exists_forall_ge_and hF hG in
   ⟨_, _root_.mul_pos F0 G0, i,
     λ j ij, let ⟨h₁, h₂⟩ := h _ ij in
     mul_le_mul h₁ h₂ (le_of_lt G0) (le_trans (le_of_lt F0) h₁)⟩
 
-theorem trichotomy (f : cau_seq α abs) : pos f ∨ lim_zero f ∨ pos (-f) :=
+theorem trichotomy (f : cau_seq α has_abs.abs) : pos f ∨ lim_zero f ∨ pos (-f) :=
 begin
   cases classical.em (lim_zero f); simp *,
   rcases abv_pos_of_not_lim_zero h with ⟨K, K0, hK⟩,
@@ -505,37 +572,37 @@ begin
     exact le_trans (le_of_lt (abs_lt.1 $ h₂ _ ij).2) h₁ }
 end
 
-instance : has_lt (cau_seq α abs) := ⟨λ f g, pos (g - f)⟩
-instance : has_le (cau_seq α abs) := ⟨λ f g, f < g ∨ f ≈ g⟩
+instance : has_lt (cau_seq α has_abs.abs) := ⟨λ f g, pos (g - f)⟩
+instance : has_le (cau_seq α has_abs.abs) := ⟨λ f g, f < g ∨ f ≈ g⟩
 
-theorem lt_of_lt_of_eq {f g h : cau_seq α abs}
+theorem lt_of_lt_of_eq {f g h : cau_seq α has_abs.abs}
   (fg : f < g) (gh : g ≈ h) : f < h :=
 show pos (h - f),
 by simpa [sub_eq_add_neg, add_comm, add_left_comm] using pos_add_lim_zero fg (neg_lim_zero gh)
 
-theorem lt_of_eq_of_lt {f g h : cau_seq α abs}
+theorem lt_of_eq_of_lt {f g h : cau_seq α has_abs.abs}
   (fg : f ≈ g) (gh : g < h) : f < h :=
 by have := pos_add_lim_zero gh (neg_lim_zero fg);
    rwa [← sub_eq_add_neg, sub_sub_sub_cancel_right] at this
 
-theorem lt_trans {f g h : cau_seq α abs} (fg : f < g) (gh : g < h) : f < h :=
+theorem lt_trans {f g h : cau_seq α has_abs.abs} (fg : f < g) (gh : g < h) : f < h :=
 show pos (h - f),
 by simpa [sub_eq_add_neg, add_comm, add_left_comm] using add_pos fg gh
 
-theorem lt_irrefl {f : cau_seq α abs} : ¬ f < f
+theorem lt_irrefl {f : cau_seq α has_abs.abs} : ¬ f < f
 | h := not_lim_zero_of_pos h (by simp [zero_lim_zero])
 
-lemma le_of_eq_of_le {f g h : cau_seq α abs}
+lemma le_of_eq_of_le {f g h : cau_seq α has_abs.abs}
   (hfg : f ≈ g) (hgh : g ≤ h) : f ≤ h :=
 hgh.elim (or.inl ∘ cau_seq.lt_of_eq_of_lt hfg)
   (or.inr ∘ setoid.trans hfg)
 
-lemma le_of_le_of_eq {f g h : cau_seq α abs}
+lemma le_of_le_of_eq {f g h : cau_seq α has_abs.abs}
   (hfg : f ≤ g) (hgh : g ≈ h) : f ≤ h :=
 hfg.elim (λ h, or.inl (cau_seq.lt_of_lt_of_eq h hgh))
   (λ h, or.inr (setoid.trans h hgh))
 
-instance : preorder (cau_seq α abs) :=
+instance : preorder (cau_seq α has_abs.abs) :=
 { lt := (<),
   le := λ f g, f < g ∨ f ≈ g,
   le_refl := λ f, or.inr (setoid.refl _),
@@ -551,14 +618,14 @@ instance : preorder (cau_seq α abs) :=
     λ ⟨h₁, h₂⟩, h₁.resolve_right
       (mt (λ h, or.inr (setoid.symm h)) h₂)⟩ }
 
-theorem le_antisymm {f g : cau_seq α abs} (fg : f ≤ g) (gf : g ≤ f) : f ≈ g :=
+theorem le_antisymm {f g : cau_seq α has_abs.abs} (fg : f ≤ g) (gf : g ≤ f) : f ≈ g :=
 fg.resolve_left (not_lt_of_le gf)
 
-theorem lt_total (f g : cau_seq α abs) : f < g ∨ f ≈ g ∨ g < f :=
+theorem lt_total (f g : cau_seq α has_abs.abs) : f < g ∨ f ≈ g ∨ g < f :=
 (trichotomy (g - f)).imp_right
   (λ h, h.imp (λ h, setoid.symm h) (λ h, by rwa neg_sub at h))
 
-theorem le_total (f g : cau_seq α abs) : f ≤ g ∨ g ≤ f :=
+theorem le_total (f g : cau_seq α has_abs.abs) : f ≤ g ∨ g ≤ f :=
 (or.assoc.2 (lt_total f g)).imp_right or.inl
 
 theorem const_lt {x y : α} : const x < const y ↔ x < y :=
@@ -567,7 +634,7 @@ show pos _ ↔ _, by rw [← const_sub, const_pos, sub_pos]
 theorem const_le {x y : α} : const x ≤ const y ↔ x ≤ y :=
 by rw le_iff_lt_or_eq; exact or_congr const_lt const_equiv
 
-lemma le_of_exists {f g : cau_seq α abs}
+lemma le_of_exists {f g : cau_seq α has_abs.abs}
   (h : ∃ i, ∀ j ≥ i, f j ≤ g j) : f ≤ g :=
 let ⟨i, hi⟩ := h in
 (or.assoc.2 (cau_seq.lt_total f g)).elim
@@ -576,14 +643,14 @@ let ⟨i, hi⟩ := h in
     not_lt_of_ge (hi (max i j) (le_max_left _ _))
       (sub_pos.1 (lt_of_lt_of_le hK0 (hKj _ (le_max_right _ _))))))
 
-theorem exists_gt (f : cau_seq α abs) : ∃ a : α, f < const a :=
+theorem exists_gt (f : cau_seq α has_abs.abs) : ∃ a : α, f < const a :=
 let ⟨K, H⟩ := f.bounded in
 ⟨K + 1, 1, zero_lt_one, 0, λ i _, begin
   rw [sub_apply, const_apply, le_sub_iff_add_le', add_le_add_iff_right],
   exact le_of_lt (abs_lt.1 (H _)).2
 end⟩
 
-theorem exists_lt (f : cau_seq α abs) : ∃ a : α, const a < f :=
+theorem exists_lt (f : cau_seq α has_abs.abs) : ∃ a : α, const a < f :=
 let ⟨a, h⟩ := (-f).exists_gt in ⟨-a, show pos _,
   by rwa [const_neg, sub_neg_eq_add, add_comm, ← sub_neg_eq_add]⟩
 

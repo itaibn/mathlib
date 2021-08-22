@@ -54,7 +54,7 @@ open set function filter cau_seq uniform_space
 /-- The metric space uniform structure on ℚ (which presupposes the existence
 of real numbers) agrees with the one coming directly from (abs : ℚ → ℚ). -/
 lemma rat.uniform_space_eq :
-  is_absolute_value.uniform_space (abs : ℚ → ℚ) = metric_space.to_uniform_space' :=
+  is_absolute_value.uniform_space (has_abs.abs : ℚ → ℚ) = metric_space.to_uniform_space' :=
 begin
   ext s,
   erw [metric.mem_uniformity_dist, is_absolute_value.mem_uniformity],
@@ -75,7 +75,8 @@ end
 
 /-- Cauchy reals packaged as a completion of ℚ using the absolute value route. -/
 noncomputable
-def rational_cau_seq_pkg : @abstract_completion ℚ $ is_absolute_value.uniform_space (abs : ℚ → ℚ) :=
+def rational_cau_seq_pkg : @abstract_completion ℚ $ is_absolute_value.uniform_space (has_abs.abs :
+  ℚ → ℚ) :=
 { space := ℝ,
   coe := (coe : ℚ → ℝ),
   uniform_struct := by apply_instance,
@@ -92,7 +93,7 @@ but they are not definitionaly equal, so it would confuse the type class system 
 also human readers). -/
 @[derive comm_ring, derive inhabited] def Q := ℚ
 
-instance : uniform_space Q := is_absolute_value.uniform_space (abs : ℚ → ℚ)
+instance : uniform_space Q := is_absolute_value.uniform_space (has_abs.abs : ℚ → ℚ)
 
 /-- Real numbers constructed as in Bourbaki. -/
 @[derive inhabited]

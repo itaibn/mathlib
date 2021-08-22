@@ -589,16 +589,18 @@ variables {R : Type*} [linear_ordered_field R]
 -- except that it is tedious to prove without tactics.
 -- Rather than stranding it at some intermediate location,
 -- it's here, immediately prior to the point of use.
-lemma min_eq_half_add_sub_abs_sub {x y : R} : min x y = 2⁻¹ * (x + y - abs (x - y)) :=
+lemma min_eq_half_add_sub_abs_sub {x y : R} : min x y = 2⁻¹ * (x + y - |x - y|) :=
 begin
-  dsimp [min, max, abs],
+  unfold has_abs.abs,
+  dsimp [min, max],
   simp only [neg_le_self_iff, if_congr, sub_nonneg, neg_sub],
   split_ifs; ring_nf; linarith,
 end
 
-lemma max_eq_half_add_add_abs_sub {x y : R} : max x y = 2⁻¹ * (x + y + abs (x - y)) :=
+lemma max_eq_half_add_add_abs_sub {x y : R} : max x y = 2⁻¹ * (x + y + |x - y|) :=
 begin
-  dsimp [min, max, abs],
+  unfold has_abs.abs,
+  dsimp [min, max],
   simp only [neg_le_self_iff, if_congr, sub_nonneg, neg_sub],
   split_ifs; ring_nf; linarith,
 end
@@ -611,11 +613,11 @@ variables {α : Type*} [topological_space α]
 variables {β : Type*} [linear_ordered_field β] [topological_space β]
   [order_topology β] [topological_ring β]
 
-lemma inf_eq (f g : C(α, β)) : f ⊓ g = (2⁻¹ : β) • (f + g - (f - g).abs) :=
+lemma inf_eq (f g : C(α, β)) : f ⊓ g = (2⁻¹ : β) • (f + g - |f - g|) :=
 ext (λ x, by simpa using min_eq_half_add_sub_abs_sub)
 
 -- Not sure why this is grosser than `inf_eq`:
-lemma sup_eq (f g : C(α, β)) : f ⊔ g = (2⁻¹ : β) • (f + g + (f - g).abs) :=
+lemma sup_eq (f g : C(α, β)) : f ⊔ g = (2⁻¹ : β) • (f + g + |f - g|) :=
 ext (λ x, by simpa [mul_add] using @max_eq_half_add_add_abs_sub _ _ (f x) (g x))
 
 end lattice

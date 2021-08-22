@@ -86,7 +86,7 @@ end
 instance has_no_atoms_volume : has_no_atoms (volume : measure ℝ) :=
 ⟨λ x, volume_singleton⟩
 
-@[simp] lemma volume_interval {a b : ℝ} : volume (interval a b) = of_real (abs (b - a)) :=
+@[simp] lemma volume_interval {a b : ℝ} : volume (interval a b) = of_real (|b - a|) :=
 by rw [interval, volume_Icc, max_sub_min_eq_abs]
 
 @[simp] lemma volume_Ioi {a : ℝ} : volume (Ioi a) = ∞ :=
@@ -212,7 +212,7 @@ lemma map_volume_add_right (a : ℝ) : measure.map (+ a) volume = volume :=
 by simpa only [add_comm] using real.map_volume_add_left a
 
 lemma smul_map_volume_mul_left {a : ℝ} (h : a ≠ 0) :
-  ennreal.of_real (abs a) • measure.map ((*) a) volume = volume :=
+  ennreal.of_real (|a|) • measure.map ((*) a) volume = volume :=
 begin
   refine (real.measure_ext_Ioo_rat $ λ p q, _).symm,
   cases lt_or_gt_of_ne h with h h,
@@ -226,17 +226,17 @@ begin
 end
 
 lemma map_volume_mul_left {a : ℝ} (h : a ≠ 0) :
-  measure.map ((*) a) volume = ennreal.of_real (abs a⁻¹) • volume :=
+  measure.map ((*) a) volume = ennreal.of_real (|a⁻¹|) • volume :=
 by conv_rhs { rw [← real.smul_map_volume_mul_left h, smul_smul,
   ← ennreal.of_real_mul (abs_nonneg _), ← abs_mul, inv_mul_cancel h, abs_one, ennreal.of_real_one,
   one_smul] }
 
 lemma smul_map_volume_mul_right {a : ℝ} (h : a ≠ 0) :
-  ennreal.of_real (abs a) • measure.map (* a) volume = volume :=
+  ennreal.of_real (|a|) • measure.map (* a) volume = volume :=
 by simpa only [mul_comm] using real.smul_map_volume_mul_left h
 
 lemma map_volume_mul_right {a : ℝ} (h : a ≠ 0) :
-  measure.map (* a) volume = ennreal.of_real (abs a⁻¹) • volume :=
+  measure.map (* a) volume = ennreal.of_real (|a⁻¹|) • volume :=
 by simpa only [mul_comm] using real.map_volume_mul_left h
 
 @[simp] lemma map_volume_neg : measure.map has_neg.neg (volume : measure ℝ) = volume :=

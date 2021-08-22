@@ -22,7 +22,7 @@ open_locale pointwise
 /-- The type `ℝ` of real numbers constructed as equivalence classes of Cauchy sequences of rational
 numbers. -/
 structure real := of_cauchy ::
-(cauchy : @cau_seq.completion.Cauchy ℚ _ _ _ abs _)
+(cauchy : @cau_seq.completion.Cauchy ℚ _ _ _ has_abs.abs _)
 notation `ℝ` := real
 
 attribute [pp_using_anonymous_constructor] real
@@ -116,9 +116,9 @@ by refine_struct { to_fun := of_cauchy ∘ of_rat };
 lemma of_rat_apply (x : ℚ) : of_rat x = of_cauchy (cau_seq.completion.of_rat x) := rfl
 
 /-- Make a real number from a Cauchy sequence of rationals (by taking the equivalence class). -/
-def mk (x : cau_seq ℚ abs) : ℝ := ⟨cau_seq.completion.mk x⟩
+def mk (x : cau_seq ℚ has_abs.abs) : ℝ := ⟨cau_seq.completion.mk x⟩
 
-theorem mk_eq {f g : cau_seq ℚ abs} : mk f = mk g ↔ f ≈ g :=
+theorem mk_eq {f g : cau_seq ℚ has_abs.abs} : mk f = mk g ↔ f ≈ g :=
 ext_cauchy_iff.trans mk_eq
 
 @[irreducible]
@@ -132,23 +132,23 @@ instance : has_lt ℝ := ⟨lt⟩
 
 lemma lt_cauchy {f g} : (⟨⟦f⟧⟩ : ℝ) < ⟨⟦g⟧⟩ ↔ f < g := show lt _ _ ↔ _, by rw lt; refl
 
-@[simp] theorem mk_lt {f g : cau_seq ℚ abs} : mk f < mk g ↔ f < g :=
+@[simp] theorem mk_lt {f g : cau_seq ℚ has_abs.abs} : mk f < mk g ↔ f < g :=
 lt_cauchy
 
 lemma mk_zero : mk 0 = 0 := by rw ← zero_cauchy; refl
 lemma mk_one : mk 1 = 1 := by rw ← one_cauchy; refl
-lemma mk_add {f g : cau_seq ℚ abs} : mk (f + g) = mk f + mk g := by simp [mk, add_cauchy]
-lemma mk_mul {f g : cau_seq ℚ abs} : mk (f * g) = mk f * mk g := by simp [mk, mul_cauchy]
-lemma mk_neg {f : cau_seq ℚ abs} : mk (-f) = -mk f := by simp [mk, neg_cauchy]
+lemma mk_add {f g : cau_seq ℚ has_abs.abs} : mk (f + g) = mk f + mk g := by simp [mk, add_cauchy]
+lemma mk_mul {f g : cau_seq ℚ has_abs.abs} : mk (f * g) = mk f * mk g := by simp [mk, mul_cauchy]
+lemma mk_neg {f : cau_seq ℚ has_abs.abs} : mk (-f) = -mk f := by simp [mk, neg_cauchy]
 
-@[simp] theorem mk_pos {f : cau_seq ℚ abs} : 0 < mk f ↔ pos f :=
+@[simp] theorem mk_pos {f : cau_seq ℚ has_abs.abs} : 0 < mk f ↔ pos f :=
 by rw [← mk_zero, mk_lt]; exact iff_of_eq (congr_arg pos (sub_zero f))
 
 @[irreducible] private def le (x y : ℝ) : Prop := x < y ∨ x = y
 instance : has_le ℝ := ⟨le⟩
 private lemma le_def {x y : ℝ} : x ≤ y ↔ x < y ∨ x = y := show le _ _ ↔ _, by rw le
 
-@[simp] theorem mk_le {f g : cau_seq ℚ abs} : mk f ≤ mk g ↔ f ≤ g :=
+@[simp] theorem mk_le {f g : cau_seq ℚ has_abs.abs} : mk f ≤ mk g ↔ f ≤ g :=
 by simp [le_def, mk_eq]; refl
 
 @[elab_as_eliminator]
@@ -278,7 +278,7 @@ open rat
 @[simp] theorem of_rat_eq_cast : ∀ x : ℚ, of_rat x = x :=
 of_rat.eq_rat_cast
 
-theorem le_mk_of_forall_le {f : cau_seq ℚ abs} :
+theorem le_mk_of_forall_le {f : cau_seq ℚ has_abs.abs} :
   (∃ i, ∀ j ≥ i, x ≤ f j) → x ≤ mk f :=
 begin
   intro h,
@@ -297,7 +297,7 @@ begin
   rwa [← sub_eq_add_neg, sub_self_div_two, sub_apply, sub_add_sub_cancel] at this
 end
 
-theorem mk_le_of_forall_le {f : cau_seq ℚ abs} {x : ℝ}
+theorem mk_le_of_forall_le {f : cau_seq ℚ has_abs.abs} {x : ℝ}
   (h : ∃ i, ∀ j ≥ i, (f j : ℝ) ≤ x) : mk f ≤ x :=
 begin
   cases h with i H,
@@ -305,8 +305,8 @@ begin
   exact le_mk_of_forall_le ⟨i, λ j ij, by simp [H _ ij]⟩
 end
 
-theorem mk_near_of_forall_near {f : cau_seq ℚ abs} {x : ℝ} {ε : ℝ}
-  (H : ∃ i, ∀ j ≥ i, abs ((f j : ℝ) - x) ≤ ε) : abs (mk f - x) ≤ ε :=
+theorem mk_near_of_forall_near {f : cau_seq ℚ has_abs.abs} {x : ℝ} {ε : ℝ}
+  (H : ∃ i, ∀ j ≥ i, |(f j : ℝ) - x| ≤ ε) : |mk f - x| ≤ ε :=
 abs_sub_le_iff.2
   ⟨sub_le_iff_le_add'.2 $ mk_le_of_forall_le $
     H.imp $ λ i h j ij, sub_le_iff_le_add'.1 (abs_sub_le_iff.1 $ h j ij).1,
@@ -321,7 +321,8 @@ let ⟨M, M0, H⟩ := f.bounded' 0 in
 
 noncomputable instance : floor_ring ℝ := archimedean.floor_ring _
 
-theorem is_cau_seq_iff_lift {f : ℕ → ℚ} : is_cau_seq abs f ↔ is_cau_seq abs (λ i, (f i : ℝ)) :=
+theorem is_cau_seq_iff_lift {f : ℕ → ℚ} : is_cau_seq has_abs.abs f ↔ is_cau_seq
+  has_abs.abs (λ i, (f i : ℝ)) :=
 ⟨λ H ε ε0,
   let ⟨δ, δ0, δε⟩ := exists_pos_rat_lt ε0 in
   (H _ δ0).imp $ λ i hi j ij, lt_trans
@@ -330,9 +331,9 @@ theorem is_cau_seq_iff_lift {f : ℕ → ℚ} : is_cau_seq abs f ↔ is_cau_seq 
    λ i hi j ij, (@rat.cast_lt ℝ _ _ _).1 $ by simpa using hi _ ij⟩
 
 theorem of_near (f : ℕ → ℚ) (x : ℝ)
-  (h : ∀ ε > 0, ∃ i, ∀ j ≥ i, abs ((f j : ℝ) - x) < ε) :
+  (h : ∀ ε > 0, ∃ i, ∀ j ≥ i, |(f j : ℝ) - x| < ε) :
   ∃ h', real.mk ⟨f, h'⟩ = x :=
-⟨is_cau_seq_iff_lift.2 (of_near _ (const abs x) h),
+⟨is_cau_seq_iff_lift.2 (of_near _ (const has_abs.abs x) h),
  sub_eq_zero.1 $ abs_eq_zero.1 $
   eq_of_le_of_forall_le_of_dense (abs_nonneg _) $ λ ε ε0,
     mk_near_of_forall_near $
@@ -367,7 +368,7 @@ begin
     simp [-sub_eq_add_neg],
     rwa [lt_div_iff ((nat.cast_pos.2 n0):((_:ℝ) < _)), sub_mul, _root_.inv_mul_cancel],
     exact ne_of_gt (nat.cast_pos.2 n0) },
-  have hg : is_cau_seq abs (λ n, f n / n : ℕ → ℚ),
+  have hg : is_cau_seq has_abs.abs (λ n, f n / n : ℕ → ℚ),
   { intros ε ε0,
     suffices : ∀ j k ≥ ⌈ε⁻¹⌉₊, (f j / j - f k / k : ℚ) < ε,
     { refine ⟨_, λ j ij, abs_lt.2 ⟨_, this _ _ ij (le_refl _)⟩⟩,
@@ -382,7 +383,7 @@ begin
       ((inv_le ε0 (nat.cast_pos.2 k0)).1 ik),
     simpa using sub_lt_iff_lt_add'.2
       (lt_of_le_of_lt hy $ sub_lt_iff_lt_add.1 $ hf₂ _ k0 _ yS) },
-  let g : cau_seq ℚ abs := ⟨λ n, f n / n, hg⟩,
+  let g : cau_seq ℚ has_abs.abs := ⟨λ n, f n / n, hg⟩,
   refine ⟨mk g, ⟨λ x xS, _, λ y h, _⟩⟩,
   { refine le_of_forall_ge_of_dense (λ z xz, _),
     cases exists_nat_gt (x - z)⁻¹ with K hK,
@@ -517,11 +518,11 @@ begin
   { exact cInf_le_cSup h₁ h₂ hne }
 end
 
-theorem cau_seq_converges (f : cau_seq ℝ abs) : ∃ x, f ≈ const abs x :=
+theorem cau_seq_converges (f : cau_seq ℝ has_abs.abs) : ∃ x, f ≈ const has_abs.abs x :=
 begin
-  let S := {x : ℝ | const abs x < f},
+  let S := {x : ℝ | const has_abs.abs x < f},
   have lb : ∃ x, x ∈ S := exists_lt f,
-  have ub' : ∀ x, f < const abs x → ∀ y ∈ S, y ≤ x :=
+  have ub' : ∀ x, f < const has_abs.abs x → ∀ y ∈ S, y ≤ x :=
     λ x h y yS, le_of_lt $ const_lt.1 $ cau_seq.lt_trans yS h,
   have ub : ∃ x, ∀ y ∈ S, y ≤ x := (exists_gt f).imp ub',
   refine ⟨Sup S,
@@ -540,6 +541,6 @@ begin
     exact ih _ ij }
 end
 
-noncomputable instance : cau_seq.is_complete ℝ abs := ⟨cau_seq_converges⟩
+noncomputable instance : cau_seq.is_complete ℝ has_abs.abs := ⟨cau_seq_converges⟩
 
 end real

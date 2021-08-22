@@ -246,22 +246,22 @@ lim_eq_of_equiv_const $ show lim_zero (inv f hf - const abv (lim f)⁻¹),
 end
 
 section
-variables [is_complete α abs]
+variables [is_complete α has_abs.abs]
 
-lemma lim_le {f : cau_seq α abs} {x : α}
-  (h : f ≤ cau_seq.const abs x) : lim f ≤ x :=
+lemma lim_le {f : cau_seq α has_abs.abs} {x : α}
+  (h : f ≤ cau_seq.const has_abs.abs x) : lim f ≤ x :=
 cau_seq.const_le.1 $ cau_seq.le_of_eq_of_le (setoid.symm (equiv_lim f)) h
 
-lemma le_lim {f : cau_seq α abs} {x : α}
-  (h : cau_seq.const abs x ≤ f) : x ≤ lim f :=
+lemma le_lim {f : cau_seq α has_abs.abs} {x : α}
+  (h : cau_seq.const has_abs.abs x ≤ f) : x ≤ lim f :=
 cau_seq.const_le.1 $ cau_seq.le_of_le_of_eq h (equiv_lim f)
 
-lemma lt_lim {f : cau_seq α abs} {x : α}
-  (h : cau_seq.const abs x < f) : x < lim f :=
+lemma lt_lim {f : cau_seq α has_abs.abs} {x : α}
+  (h : cau_seq.const has_abs.abs x < f) : x < lim f :=
 cau_seq.const_lt.1 $ cau_seq.lt_of_lt_of_eq h (equiv_lim f)
 
-lemma lim_lt {f : cau_seq α abs} {x : α}
-  (h : f < cau_seq.const abs x) : lim f < x :=
+lemma lim_lt {f : cau_seq α has_abs.abs} {x : α}
+  (h : f < cau_seq.const has_abs.abs x) : lim f < x :=
 cau_seq.const_lt.1 $ cau_seq.lt_of_eq_of_lt (setoid.symm (equiv_lim f)) h
 
 end

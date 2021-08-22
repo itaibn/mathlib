@@ -1158,7 +1158,7 @@ multiset.induction_on s (λ _, dvd_zero _)
 multiset.induction_on s (by simp) (by simp [singleton_eq_cons])
 
 theorem abs_sum_le_sum_abs [linear_ordered_add_comm_group α] {s : multiset α} :
-  abs s.sum ≤ (s.map abs).sum :=
+  has_abs.abs s.sum ≤ (s.map has_abs.abs).sum :=
 le_sum_of_subadditive _ abs_zero abs_add s
 
 /-! ### Join -/
