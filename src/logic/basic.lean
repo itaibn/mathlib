@@ -805,8 +805,12 @@ theorem forall_swap {p : α → β → Prop} : (∀ x y, p x y) ↔ ∀ y x, p x
 theorem exists_swap {p : α → β → Prop} : (∃ x y, p x y) ↔ ∃ y x, p x y :=
 ⟨λ ⟨x, y, h⟩, ⟨y, x, h⟩, λ ⟨y, x, h⟩, ⟨x, y, h⟩⟩
 
-@[simp] theorem exists_imp_distrib : ((∃ x, p x) → b) ↔ ∀ x, p x → b :=
+@[simp] theorem forall_exists_index {q : (∃ x, p x) → Prop} :
+  (∀ h, q h) ↔ ∀ x (h : p x), q ⟨x, h⟩ :=
 ⟨λ h x hpx, h ⟨x, hpx⟩, λ h ⟨x, hpx⟩, h x hpx⟩
+
+theorem exists_imp_distrib : ((∃ x, p x) → b) ↔ ∀ x, p x → b :=
+forall_exists_index
 
 /--
 Extract an element from a existential statement, using `classical.some`.

@@ -552,6 +552,15 @@ ext $ λ x, by simp only [mem_insert, or.assoc.symm, or_self]
 @[simp] theorem insert_ne_empty (a : α) (s : finset α) : insert a s ≠ ∅ :=
 (insert_nonempty a s).ne_empty
 
+lemma mem_update_insert' {β : α → Type*} [Π a, decidable_eq (β a)]
+  {s : Π a, finset (β a)} {a b : α} {x : β a} {y : β b} :
+  y ∈ function.update s a (insert x (s a)) b ↔ y ∈ s b ∨ ∃ h : b = a, h.rec y = x :=
+by rcases eq_or_ne b a with rfl|hj; simp [*, or_comm]
+
+lemma mem_update_insert [decidable_eq β] {s : α → finset β} {a b : α} {x y : β} :
+  y ∈ function.update s a (insert x (s a)) b ↔ y ∈ s b ∨ b = a ∧ y = x :=
+finset.mem_update_insert'.trans $ by simp
+
 section
 universe u
 /-!

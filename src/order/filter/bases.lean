@@ -399,6 +399,12 @@ lemma has_basis.sup (hl : l.has_basis p s) (hl' : l'.has_basis p' s') :
   simp only [← and_assoc, exists_and_distrib_right, and_comm]
 end⟩
 
+lemma has_basis_supr {ι : Type*} {ι' : ι → Type*} {l : ι → filter α}
+  {p : Π i, ι' i → Prop} {s : Π i, ι' i → set α} (hl : ∀ i, (l i).has_basis (p i) (s i)) :
+  (⨆ i, l i).has_basis (λ f : Π i, ι' i, ∀ i, p i (f i)) (λ f : Π i, ι' i, ⋃ i, s i (f i)) :=
+has_basis_iff.mpr $ λ t, by simp only [has_basis_iff, (hl _).mem_iff, classical.skolem,
+  forall_and_distrib, Union_subset_iff, mem_supr]
+
 lemma has_basis.inf_principal (hl : l.has_basis p s) (s' : set α) :
   (l ⊓ 𝓟 s').has_basis p (λ i, s i ∩ s') :=
 ⟨λ t, by simp only [mem_inf_principal, hl.mem_iff, subset_def, mem_set_of_eq,

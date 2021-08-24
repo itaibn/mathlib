@@ -372,6 +372,30 @@ end
 section complete_linear_order
 variables [complete_linear_order α] {s t : set α} {a b : α}
 
+/-!
+### Lemmas about `min`/`max` and `⊤`/`⊥`
+
+These lemmas only need a `linear_order_bot` or `linear_order_top` but we do not have these classes.
+-/
+
+lemma min_ne_bot : min a b ≠ ⊥ ↔ a ≠ ⊥ ∧ b ≠ ⊥ :=
+by simp only [← bot_lt_iff_ne_bot, lt_min_iff]
+
+@[simp] lemma min_eq_bot : min a b = ⊥ ↔ a = ⊥ ∨ b = ⊥ :=
+by simpa [← not_or_distrib, not_iff_not] using @min_ne_bot α _ a b
+
+lemma max_ne_top : max a b ≠ ⊤ ↔ a ≠ ⊤ ∧ b ≠ ⊤ :=
+@min_ne_bot (order_dual α) _ a b
+
+@[simp] lemma max_eq_top : max a b = ⊤ ↔ a = ⊤ ∨ b = ⊤ :=
+@min_eq_bot (order_dual α) _ a b
+
+@[simp] lemma min_eq_top : min a b = ⊤ ↔ a = ⊤ ∧ b = ⊤ :=
+by simp only [← top_le_iff, le_min_iff]
+
+@[simp] lemma max_eq_bot : max a b = ⊥ ↔ a = ⊥ ∧ b = ⊥ :=
+@min_eq_top (order_dual α) _ a b
+
 lemma Inf_lt_iff : Inf s < b ↔ (∃a∈s, a < b) :=
 is_glb_lt_iff (is_glb_Inf s)
 
