@@ -1,27 +1,49 @@
 import analysis.box_integral.partition.subbox_induction
 
 open set function filter emetric
-open_locale classical topological_space filter ennreal
+open_locale classical topological_space filter ennreal nnreal
 noncomputable theory
 
 namespace box_integral
 
 variables {ι : Type*} [fintype ι] {I : box ι}
 
-namespace marked_partition
+namespace box
 
-def quasi_homothetic (π : marked_partition I) (c : ℝ) :=
-∀ (J ∈ π) (i j : ι), ((J : _).upper i - J.lower i) / (J.upper j - J.lower j) ≤
-  c * ((I.upper i - I.lower i) / (I.upper j - I.lower j))
+def distortion (I : box ι) : ℝ≥0 :=
+finset.univ.sup $ λ i : ι, nndist (I : _).lower I.upper / nndist (I.lower i) (I.upper i)
 
-lemma quasi_homothetic.mono {π : marked_partition I} {c₁ c₂ : ℝ} (h : π.quasi_homothetic c₁)
-  (hc : c₁ ≤ c₂) : π.quasi_homothetic c₂ :=
-λ J hJ i j, (h J hJ i j).trans $ mul_le_mul_of_nonneg_right hc $
-  div_nonneg (sub_nonneg.2 $ I.lower_le_upper i) (sub_nonneg.2 $ I.lower_le_upper j)
+lemma distortion_eq_of_sub_eq_div {I J : box ι} {r : ℝ}
+  (h : ∀ i, I.upper i - I.lower i = (J.upper i - J.lower i) / r) :
+  distortion I = distortion J :=
+begin
+  simp only [distortion, nndist_pi_def, real.nndist_eq', h, real.nnabs.map_div],
+  congr' 1 with i,
+  have : 0 < r,
+  { by_contra hr,
+    have := div_nonpos_of_nonneg_of_nonpos (sub_nonneg.2 $ J.lower_le_upper i) (not_lt.1 hr),
+    rw ← h at this,
+    exact this.not_lt (sub_pos.2 $ I.lower_lt_upper i) },
+  simp only [nnreal.finset_sup_div, div_div_div_cancel_right _ (real.nnabs.map_ne_zero.2 this.ne')]
+end
 
-end marked_partition
+lemma nndist_le_distortion_mul (I : box ι) (i : ι) :
+  nndist I.lower I.upper ≤ I.distortion * nndist (I.lower i) (I.upper i) :=
+calc nndist I.lower I.upper =
+  (nndist I.lower I.upper / nndist (I.lower i) (I.upper i)) *  nndist (I.lower i) (I.upper i) :
+  (div_mul_cancel _ $ mt nndist_eq_zero.1 (I.lower_lt_upper i).ne).symm
+... ≤ I.distortion * nndist (I.lower i) (I.upper i) :
+  mul_le_mul_right' (finset.le_sup $ finset.mem_univ i) _
 
-open marked_partition
+lemma dist_le_distortion_mul (I : box ι) (i : ι) :
+  dist I.lower I.upper ≤ I.distortion * (I.upper i - I.lower i) :=
+have A : I.lower i - I.upper i < 0, from sub_neg.2 (I.lower_lt_upper i),
+by simpa only [← nnreal.coe_le_coe, ← dist_nndist, nnreal.coe_mul, real.dist_eq,
+  abs_of_neg A, neg_sub] using I.nndist_le_distortion_mul i
+
+end box
+
+open marked_partition box
 
 def Riemann : filter (marked_partition I) :=
 (⨅ r ≠ (0 : ℝ≥0∞), 𝓟 {π | ∀ J ∈ π, edist (J : _).lower J.upper ≤ r}) ⊓ 𝓟 {π | is_Henstock π}
@@ -32,8 +54,8 @@ def McShane : filter (marked_partition I) :=
 def Henstock : filter (marked_partition I) :=
 McShane ⊓ 𝓟 {π | is_Henstock π}
 
-def Henstock_qh : filter (marked_partition I) :=
-⨆ c : ℝ, Henstock ⊓ 𝓟 {π | π.quasi_homothetic c}
+def Henstock' : filter (marked_partition I) :=
+⨆ c : ℝ≥0, Henstock ⊓ 𝓟 {π | ∀ J ∈ π, distortion J ≤ c}
 
 lemma has_basis_McShane :
   (@McShane _ _ I).has_basis (λ r : (ι → ℝ) → ℝ≥0∞, ∀ x ∈ I.Icc, r x ≠ 0)
@@ -50,20 +72,14 @@ lemma has_basis_Henstock :
     (λ r, {π | π.is_subordinate r ∧ π.is_Henstock}) :=
 has_basis_McShane.inf_principal _
 
-lemma has_basis_Henstock_qh :
-  (@Henstock_qh _ _ I).has_basis (λ r : ℝ → (ι → ℝ) → ℝ≥0∞, ∀ c (x ∈ I.Icc), r c x ≠ 0)
-    (λ r, {π | ∃ c, π.is_subordinate (r c) ∧ π.is_Henstock ∧ π.quasi_homothetic c}) :=
+lemma has_basis_Henstock' :
+  (@Henstock' _ _ I).has_basis (λ r : ℝ≥0 → (ι → ℝ) → ℝ≥0∞, ∀ c (x ∈ I.Icc), r c x ≠ 0)
+    (λ r, {π | ∃ c, π.is_subordinate (r c) ∧ π.is_Henstock ∧
+      ∀ (J ∈ π), (J : _).distortion ≤ c}) :=
 begin
-  have := λ c : ℝ, (@has_basis_Henstock ι _ I).inf_principal {π | π.quasi_homothetic c},
+  have := λ c : ℝ≥0, (@has_basis_Henstock ι _ I).inf_principal {π | ∀ J ∈ π, distortion J ≤ c},
   simpa only [set_of_exists, and.assoc, ← set_of_and] using has_basis_supr this
 end
-
-lemma has_basis_Henstock_qh_Ici (b : ℝ) :
-  (@Henstock_qh _ _ I).has_basis (λ r : Ici b → (ι → ℝ) → ℝ≥0∞, ∀ c (x ∈ I.Icc), r c x ≠ 0)
-    (λ r, {π | ∃ c, π.is_subordinate (r c) ∧ π.is_Henstock ∧ π.quasi_homothetic c}) :=
-has_basis_Henstock_qh.to_has_basis (λ r hr, ⟨λ c, r c, λ c, hr c, λ π ⟨c, hc⟩, ⟨c, hc⟩⟩) $
-  λ r hr, ⟨λ c, r ⟨max c b, le_max_right c b⟩, λ c x hx, hr _ x hx,
-    λ π ⟨c, hc⟩, ⟨⟨max c b, le_max_right c b⟩, hc.1, hc.2.1, hc.2.2.mono (le_max_left c b)⟩⟩
 
 lemma has_basis_Riemann :
   (@Riemann _ _ I).has_basis (λ r : ℝ≥0∞, r ≠ 0)
@@ -86,15 +102,16 @@ begin
   simpa only [two_mul, ennreal.add_halves] using hπ.edist_le hJ
 end
 
-lemma Henstock_qh_le_Henstock : @Henstock_qh _ _ I ≤ Henstock :=
+lemma Henstock'_le_Henstock : @Henstock' _ _ I ≤ Henstock :=
 supr_le $ λ c, inf_le_left
 
-instance Henstock_qh_ne_bot : (@Henstock_qh _ _ I).ne_bot :=
-has_basis_Henstock_qh.ne_bot_iff.2 $ λ r hr,
-  let ⟨π, hHen, hr, hsub⟩ := exists_is_Henstock_is_subordinate_homothetic I (hr 1) in
-  ⟨π, 1, hr, hHen, λ J hJ i j, let ⟨n, hn⟩ := hsub J hJ in by field_simp [hn]⟩
+instance Henstock'_ne_bot : (@Henstock' _ _ I).ne_bot :=
+has_basis_Henstock'.ne_bot_iff.2 $ λ r hr,
+  let ⟨π, hHen, hr, hsub⟩ := exists_is_Henstock_is_subordinate_homothetic I (hr _) in
+  ⟨π, distortion I, hr, hHen, λ J hJ,
+    let ⟨n, hn⟩ := hsub J hJ in (distortion_eq_of_sub_eq_div hn).le⟩
 
-instance Henstock_ne_bot : (@Henstock _ _ I).ne_bot := ne_bot_of_le Henstock_qh_le_Henstock
+instance Henstock_ne_bot : (@Henstock _ _ I).ne_bot := ne_bot_of_le Henstock'_le_Henstock
 instance McShane_ne_bot : (@McShane _ _ I).ne_bot := ne_bot_of_le Henstock_le_McShane
 instance Riemann_ne_bot : (@Riemann _ _ I).ne_bot := ne_bot_of_le Henstock_le_Riemann
 
