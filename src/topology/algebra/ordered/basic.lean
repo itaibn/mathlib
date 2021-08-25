@@ -3338,10 +3338,9 @@ lemma tendsto_at_top_csupr_pi {ι α : Type*} {β : ι → Type*} [preorder α]
   (hbdd : bdd_above $ set.range f) :
   tendsto f at_top (𝓝 (⨆i, f i)) :=
 begin
-  by_cases ha : nonempty α,
-  { resetI,
-    exact tendsto_at_top_is_lub_pi h_mono (is_lub_cSup (range_nonempty f) hbdd) },
-  { exact tendsto_of_not_nonempty ha }
+  casesI is_empty_or_nonempty α,
+  exacts [tendsto_of_is_empty,
+    tendsto_at_top_is_lub_pi h_mono (is_lub_cSup (range_nonempty f) hbdd)]
 end
 
 lemma tendsto_at_top_csupr_pi' {ι α β : Type*} [preorder α] [topological_space β]
