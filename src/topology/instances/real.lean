@@ -89,35 +89,6 @@ theorem embedding_of_rat : embedding (coe : ℚ → ℝ) := dense_embedding_of_r
 
 theorem continuous_of_rat : continuous (coe : ℚ → ℝ) := uniform_continuous_of_rat.continuous
 
-lemma int.uniform_embedding_coe_real : uniform_embedding (coe : ℤ → ℝ) :=
-{ comap_uniformity :=
-    begin
-      refine le_antisymm (le_principal_iff.2 _) (@refl_le_uniformity ℤ $
-        uniform_space.comap coe (infer_instance : uniform_space ℝ)),
-      refine (uniformity_basis_dist.comap _).mem_iff.2 ⟨1, zero_lt_one, _⟩,
-      rintro ⟨a, b⟩ (h : abs (a - b : ℝ) < 1),
-      norm_cast at h,
-      erw [@int.lt_add_one_iff _ 0, abs_nonpos_iff, sub_eq_zero] at h, assumption
-    end,
-  inj := int.cast_injective }
-
-instance : metric_space ℤ := int.uniform_embedding_coe_real.comap_metric_space _
-
-theorem int.dist_eq (x y : ℤ) : dist x y = abs (x - y) := rfl
-
-@[norm_cast, simp] theorem int.dist_cast_real (x y : ℤ) : dist (x : ℝ) y = dist x y := rfl
-
-@[norm_cast, simp] theorem int.dist_cast_rat (x y : ℤ) : dist (x : ℚ) y = dist x y :=
-by rw [← int.dist_cast_real, ← rat.dist_cast]; congr' 1; norm_cast
-
-instance : proper_space ℤ :=
-⟨ begin
-    intros x r,
-    apply set.finite.is_compact,
-    have : closed_ball x r = coe ⁻¹' (closed_ball (x:ℝ) r) := rfl,
-    simp [this, closed_ball_Icc, set.Icc_ℤ_finite],
-  end ⟩
-
 theorem real.uniform_continuous_add : uniform_continuous (λp : ℝ × ℝ, p.1 + p.2) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
 let ⟨δ, δ0, Hδ⟩ := rat_add_continuous_lemma abs ε0 in
