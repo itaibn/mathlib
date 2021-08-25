@@ -261,14 +261,6 @@ complete_lattice_of_Sup α (λ s, is_lub_Sup s)
 /-- A complete linear order is a linear order whose lattice structure is complete. -/
 class complete_linear_order (α : Type*) extends complete_lattice α, linear_order α
 
-@[priority 100]
-instance linear_order_bot_of_complete_linear_order [complete_linear_order α] : linear_order_bot α :=
-{ .. ‹complete_linear_order α› }
-
-@[priority 100]
-instance linear_order_top_of_complete_linear_order [complete_linear_order α] : linear_order_top α :=
-{ .. ‹complete_linear_order α› }
-
 namespace order_dual
 variable (α)
 
