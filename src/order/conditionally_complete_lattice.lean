@@ -673,7 +673,7 @@ noncomputable instance : complete_linear_order (with_top α) :=
 { Sup := Sup, le_Sup := assume s, (is_lub_Sup s).1, Sup_le := assume s, (is_lub_Sup s).2,
   Inf := Inf, le_Inf := assume s, (is_glb_Inf s).2, Inf_le := assume s, (is_glb_Inf s).1,
   decidable_le := classical.dec_rel _,
-  .. with_top.linear_order, ..with_top.lattice, ..with_top.order_top, ..with_top.order_bot }
+  .. with_top.linear_order_top, ..with_top.lattice, ..with_top.order_bot }
 
 lemma coe_Sup {s : set α} (hb : bdd_above s) : (↑(Sup s) : with_top α) = (⨆a∈s, ↑a) :=
 begin
@@ -911,7 +911,7 @@ noncomputable instance with_top.with_bot.complete_lattice {α : Type*}
 noncomputable instance with_top.with_bot.complete_linear_order {α : Type*}
   [conditionally_complete_linear_order α] : complete_linear_order (with_top (with_bot α)) :=
 { .. with_top.with_bot.complete_lattice,
-  .. with_top.linear_order }
+  .. with_top.linear_order_top }
 
 end with_top_bot
 

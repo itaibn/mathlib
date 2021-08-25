@@ -133,6 +133,10 @@ class linear_ordered_add_comm_monoid_with_top (α : Type*)
 section linear_ordered_add_comm_monoid_with_top
 variables [linear_ordered_add_comm_monoid_with_top α] {a b : α}
 
+@[priority 100]
+instance linear_ordered_add_comm_monoid_with_top.to_linear_order_top  : linear_order_top α :=
+{ .. ‹linear_ordered_add_comm_monoid_with_top α› }
+
 @[simp]
 lemma top_add (a : α) : ⊤ + a = ⊤ := linear_ordered_add_comm_monoid_with_top.top_add' a
 
@@ -238,7 +242,7 @@ with_bot.coe_le_coe
 
 instance [lattice α] : lattice (with_zero α) := with_bot.lattice
 
-instance [linear_order α] : linear_order (with_zero α) := with_bot.linear_order
+instance [linear_order α] : linear_order_bot (with_zero α) := with_bot.linear_order_bot
 
 lemma mul_le_mul_left {α : Type u} [has_mul α] [preorder α]
   [covariant_class α α (*) (≤)] :
@@ -416,7 +420,7 @@ instance [linear_ordered_add_comm_monoid α] :
   linear_ordered_add_comm_monoid_with_top (with_top α) :=
 { top_add' := λ x, with_top.top_add,
   ..with_top.order_top,
-  ..with_top.linear_order,
+  ..with_top.linear_order_top,
   ..with_top.ordered_add_comm_monoid,
   ..option.nontrivial }
 
@@ -469,7 +473,7 @@ begin
 end
 
 instance [linear_ordered_add_comm_monoid α] : linear_ordered_add_comm_monoid (with_bot α) :=
-{ ..with_bot.linear_order,
+{ ..with_bot.linear_order_bot,
   ..with_bot.ordered_add_comm_monoid }
 
 -- `by norm_cast` proves this lemma, so I did not tag it with `norm_cast`

@@ -664,6 +664,9 @@ instance order_top [order_top α] : order_top (with_bot α) :=
   le_top := λ o a ha, by cases ha; exact ⟨_, rfl, le_top⟩,
   ..with_bot.partial_order }
 
+instance linear_order_top [linear_order_top α] : linear_order_top (with_bot α) :=
+{ .. with_bot.linear_order_bot, .. with_bot.order_top }
+
 instance bounded_lattice [bounded_lattice α] : bounded_lattice (with_bot α) :=
 { ..with_bot.lattice, ..with_bot.order_top, ..with_bot.order_bot }
 
@@ -900,6 +903,9 @@ instance order_bot [order_bot α] : order_bot (with_top α) :=
 { bot := some ⊥,
   bot_le := λ o a ha, by cases ha; exact ⟨_, rfl, bot_le⟩,
   ..with_top.partial_order }
+
+instance linear_order_bot [linear_order_bot α] : linear_order_bot (with_top α) :=
+{ .. with_top.linear_order_top, .. with_top.order_bot }
 
 instance bounded_lattice [bounded_lattice α] : bounded_lattice (with_top α) :=
 { ..with_top.lattice, ..with_top.order_top, ..with_top.order_bot }
