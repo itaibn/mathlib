@@ -84,9 +84,6 @@ instance : add_monoid_hom_class (M →ₗ[R] M₂) M M₂ :=
 /-- Helper instance for when there's too many metavariables to apply `to_fun.to_coe_fn` directly. -/
 instance : has_coe_to_fun (M →ₗ[R] M₂) := to_fun.to_coe_fn
 
-/-- Helper instance for when there's too many metavariables to apply `to_fun.to_coe_fn` directly. -/
-instance : has_coe_to_fun (M →ₗ[R] M₂) := to_fun.to_coe_fn
-
 @[simp] lemma to_fun_eq_coe {f : M →ₗ[R] M₂} : f.to_fun = (f : M → M₂) := rfl
 
 @[ext] theorem ext {f g : M →ₗ[R] M₂} (h : ∀ x, f x = g x) : f = g := fun_like.ext f g h
