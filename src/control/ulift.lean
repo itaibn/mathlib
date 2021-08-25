@@ -2,9 +2,12 @@
 Copyright (c) 2018 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Jannis Limperg
-
-Facts about `ulift` and `plift`.
 -/
+
+/-!
+# Monadic instances for `ulift` and `plift`
+
+In this file we define `monad` and `is_lawful_monad` instances on `plift` and `ulift`. -/
 
 universes u v
 
@@ -13,19 +16,24 @@ namespace plift
 variables {α : Sort u} {β : Sort v}
 
 /-- Functorial action. -/
-@[simp] protected def map (f : α → β) : plift α → plift β
-| (up a) := up (f a)
+protected def map (f : α → β) (a : plift α) : plift β :=
+plift.up (f a.down)
+
+@[simp] lemma map_up (f : α → β) (a : α) : (plift.up a).map f = plift.up (f a) := rfl
 
 /-- Embedding of pure values. -/
 @[simp] protected def pure : α → plift α := up
 
 /-- Applicative sequencing. -/
-@[simp] protected def seq : plift (α → β) → plift α → plift β
-| (up f) (up a) := up (f a)
+protected def seq (f : plift (α → β)) (x : plift α) : plift β :=
+plift.up (f.down x.down)
+
+@[simp] lemma seq_up (f : α → β) (x : α) : (plift.up f).seq (plift.up x) = plift.up (f x) := rfl
 
 /-- Monadic bind. -/
-@[simp] protected def bind : plift α → (α → plift β) → plift β
-| (up a) f := f a
+protected def bind (a : plift α) (f : α → plift β) : plift β := f a.down
+
+@[simp] lemma bind_up (a : α) (f : α → plift β) : (plift.up a).bind f = f a := rfl
 
 instance : monad plift :=
 { map := @plift.map,
@@ -61,20 +69,24 @@ namespace ulift
 variables {α : Type u} {β : Type v}
 
 /-- Functorial action. -/
-@[simp] protected def map (f : α → β) : ulift α → ulift β
-| (up a) := up (f a)
+protected def map (f : α → β) (a : ulift α) : ulift β :=
+ulift.up (f a.down)
+
+@[simp] lemma map_up (f : α → β) (a : α) : (ulift.up a).map f = ulift.up (f a) := rfl
 
 /-- Embedding of pure values. -/
 @[simp] protected def pure : α → ulift α := up
 
 /-- Applicative sequencing. -/
-@[simp] protected def seq : ulift (α → β) → ulift α → ulift β
-| (up f) (up a) := up (f a)
+protected def seq (f : ulift (α → β)) (x : ulift α) : ulift β :=
+ulift.up (f.down x.down)
+
+@[simp] lemma seq_up (f : α → β) (x : α) : (ulift.up f).seq (ulift.up x) = ulift.up (f x) := rfl
 
 /-- Monadic bind. -/
-@[simp] protected def bind : ulift α → (α → ulift β) → ulift β
-| (up a) f := up (down (f a))
--- The `up ∘ down` gives us more universe polymorphism than simply `f a`.
+protected def bind (a : ulift α) (f : α → ulift β) : ulift β := f a.down
+
+@[simp] lemma bind_up (a : α) (f : α → ulift β) : (ulift.up a).bind f = f a := rfl
 
 instance : monad ulift :=
 { map := @ulift.map,
@@ -87,7 +99,8 @@ instance : is_lawful_functor ulift :=
   comp_map := λ α β γ g h ⟨x⟩, rfl }
 
 instance : is_lawful_applicative ulift :=
-{ pure_seq_eq_map := λ α β g ⟨x⟩, rfl,
+{ to_is_lawful_functor := ulift.is_lawful_functor,
+   pure_seq_eq_map := λ α β g ⟨x⟩, rfl,
   map_pure := λ α β g x, rfl,
   seq_pure := λ α β ⟨g⟩ x, rfl,
   seq_assoc := λ α β γ ⟨x⟩ ⟨g⟩ ⟨h⟩, rfl }
