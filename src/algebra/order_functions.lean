@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro
 -/
 import algebra.order
-import order.lattice
+import order.bounded_lattice
 
 /-!
 # `max` and `min`
@@ -124,3 +124,39 @@ lemma min_left_commutative : left_commutative (min : α → α → α) :=
 min_left_comm
 
 end
+
+section bot
+
+variables [linear_order_bot α] {a b : α}
+
+lemma min_ne_bot : min a b ≠ ⊥ ↔ a ≠ ⊥ ∧ b ≠ ⊥ :=
+by simp only [← bot_lt_iff_ne_bot, lt_min_iff]
+
+@[simp] lemma min_eq_bot : min a b = ⊥ ↔ a = ⊥ ∨ b = ⊥ :=
+by simpa [← not_or_distrib, not_iff_not] using @min_ne_bot α _ a b
+
+@[simp] lemma max_eq_bot : max a b = ⊥ ↔ a = ⊥ ∧ b = ⊥ :=
+by simp only [← le_bot_iff, max_le_iff]
+
+lemma max_ne_bot : max a b ≠ ⊥ ↔ a ≠ ⊥ ∨ b ≠ ⊥ :=
+by simp [not_and_distrib]
+
+end bot
+
+section top
+
+variables [linear_order_top α] {a b : α}
+
+lemma max_ne_top : max a b ≠ ⊤ ↔ a ≠ ⊤ ∧ b ≠ ⊤ :=
+@min_ne_bot (order_dual α) _ a b
+
+@[simp] lemma max_eq_top : max a b = ⊤ ↔ a = ⊤ ∨ b = ⊤ :=
+@min_eq_bot (order_dual α) _ a b
+
+@[simp] lemma min_eq_top : min a b = ⊤ ↔ a = ⊤ ∧ b = ⊤ :=
+@max_eq_bot (order_dual α) _ a b
+
+lemma min_ne_top : min a b ≠ ⊤ ↔ a ≠ ⊤ ∨ b ≠ ⊤ :=
+@max_ne_bot (order_dual α) _ a b
+
+end top
