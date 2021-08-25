@@ -27,7 +27,6 @@ instances for `Prop` and `fun`.
   of `disjoint` that are common to `generalized_boolean_algebra` and `bounded_distrib_lattice`.
 * `bounded_distrib_lattice α`: Bounded and distributive lattice. Typical examples include `Prop` and
   `set α`.
-* `linear_order_top α`, `linear_order_bot α`: linear order with top (bot) element.
 * `is_compl x y`: In a bounded lattice, predicate for "`x` is a complement of `y`". Note that in a
   non distributive lattice, an element can have several complements.
 * `is_complemented α`: Typeclass stating that any element of a lattice has a complement.
@@ -451,18 +450,6 @@ lemma subsingleton_iff_bot_eq_top {α : Type*} [bounded_lattice α] :
   (⊥ : α) = (⊤ : α) ↔ subsingleton α :=
 ⟨subsingleton_of_bot_eq_top, λ h, by exactI subsingleton.elim ⊥ ⊤⟩
 
-/-! ### Linear order with bottom element -/
-
-/-- A linear order with bottom element -/
-class linear_order_bot (α : Type*) extends linear_order α, order_bot α
-
-/-- A linear order with top element -/
-class linear_order_top (α : Type*) extends linear_order α, order_top α
-
-@[priority 100]
-instance distrib_lattice_bot_of_linear_order [linear_order_bot α] : distrib_lattice_bot α :=
-{ .. ‹linear_order_bot α›, .. distrib_lattice_of_linear_order }
-
 /-! ### `with_bot`, `with_top` -/
 
 /-- Attach `⊥` to a type. -/
@@ -590,7 +577,7 @@ instance [partial_order α] [is_total α (≤)] : is_total (with_bot α) (≤) :
   | some x, some y := by simp only [some_le_some, total_of]
   end }
 
-instance linear_order_bot [linear_order α] : linear_order_bot (with_bot α) :=
+instance linear_order [linear_order α] : linear_order (with_bot α) :=
 { le_total := λ o₁ o₂, begin
     cases o₁ with a, {exact or.inl bot_le},
     cases o₂ with b, {exact or.inr bot_le},
@@ -598,7 +585,7 @@ instance linear_order_bot [linear_order α] : linear_order_bot (with_bot α) :=
   end,
   decidable_le := with_bot.decidable_le,
   decidable_lt := with_bot.decidable_lt,
-  ..with_bot.order_bot }
+  ..with_bot.partial_order }
 
 instance semilattice_sup [semilattice_sup α] : semilattice_sup_bot (with_bot α) :=
 { sup          := option.lift_or_get (⊔),
@@ -663,9 +650,6 @@ instance order_top [order_top α] : order_top (with_bot α) :=
 { top := some ⊤,
   le_top := λ o a ha, by cases ha; exact ⟨_, rfl, le_top⟩,
   ..with_bot.partial_order }
-
-instance linear_order_top [linear_order_top α] : linear_order_top (with_bot α) :=
-{ .. with_bot.linear_order_bot, .. with_bot.order_top }
 
 instance bounded_lattice [bounded_lattice α] : bounded_lattice (with_bot α) :=
 { ..with_bot.lattice, ..with_bot.order_top, ..with_bot.order_bot }
@@ -830,7 +814,7 @@ instance [partial_order α] [is_total α (≤)] : is_total (with_top α) (≤) :
   | some x, some y := by simp only [some_le_some, total_of]
   end }
 
-instance linear_order_top [linear_order α] : linear_order_top (with_top α) :=
+instance linear_order [linear_order α] : linear_order (with_top α) :=
 { le_total := λ o₁ o₂, begin
     cases o₁ with a, {exact or.inr le_top},
     cases o₂ with b, {exact or.inl le_top},
@@ -838,7 +822,7 @@ instance linear_order_top [linear_order α] : linear_order_top (with_top α) :=
   end,
   decidable_le := with_top.decidable_le,
   decidable_lt := with_top.decidable_lt,
-  .. with_top.order_top }
+  ..with_top.partial_order }
 
 instance semilattice_inf [semilattice_inf α] : semilattice_inf_top (with_top α) :=
 { inf          := option.lift_or_get (⊓),
@@ -903,9 +887,6 @@ instance order_bot [order_bot α] : order_bot (with_top α) :=
 { bot := some ⊥,
   bot_le := λ o a ha, by cases ha; exact ⟨_, rfl, bot_le⟩,
   ..with_top.partial_order }
-
-instance linear_order_bot [linear_order_bot α] : linear_order_bot (with_top α) :=
-{ .. with_top.linear_order_top, .. with_top.order_bot }
 
 instance bounded_lattice [bounded_lattice α] : bounded_lattice (with_top α) :=
 { ..with_top.lattice, ..with_top.order_top, ..with_top.order_bot }
@@ -1009,12 +990,6 @@ instance [semilattice_sup_top α] : semilattice_inf_bot (order_dual α) :=
 
 instance [bounded_lattice α] : bounded_lattice (order_dual α) :=
 { .. order_dual.lattice α, .. order_dual.order_top α, .. order_dual.order_bot α }
-
-instance [linear_order_bot α] : linear_order_top (order_dual α) :=
-{ .. order_dual.linear_order α, .. order_dual.order_top α }
-
-instance [linear_order_top α] : linear_order_bot (order_dual α) :=
-{ .. order_dual.linear_order α, .. order_dual.order_bot α }
 
 /- If you define `distrib_lattice_top`, add the `order_dual` instances between `distrib_lattice_bot`
 and `distrib_lattice_top` here -/
