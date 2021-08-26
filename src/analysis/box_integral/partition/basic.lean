@@ -162,40 +162,52 @@ by simp only [coe_eq_pi, ← pi_inter_distrib, univ_pi_nonempty_iff, Ioc_inter_I
 
 /-- Intersection of two boxes. Since two nonempty boxes can be disjoint, this function that takes a
 proof of `(I ∩ J : set (ι → ℝ)).nonempty` as an argument. -/
-def inter (I J : box ι) : part (box ι) :=
+@[simps dom] def inter (I J : box ι) : part (box ι) :=
 { dom := (I ∩ J : set (ι → ℝ)).nonempty,
   get := λ H, ⟨_, _, nonempty_coe_inter_coe.1 H⟩ }
 
-@[simp, norm_cast] lemma coe_inter (H : (I ∩ J : set (ι → ℝ)).nonempty) :
-  (I.inter J H : set (ι → ℝ)) = I ∩ J :=
+@[simp, norm_cast] lemma coe_inter_get (H : (I ∩ J : set (ι → ℝ)).nonempty) :
+  ((I.inter J).get H : set (ι → ℝ)) = I ∩ J :=
 by simp only [inter, coe_eq_pi, ← pi_inter_distrib, Ioc_inter_Ioc, sup_eq_max, inf_eq_min]
 
-@[simp] lemma mem_inter (H : (I ∩ J : set (ι → ℝ)).nonempty) :
-  x ∈ I.inter J H ↔ x ∈ I ∧ x ∈ J :=
-by simp only [← mem_coe, coe_inter, mem_inter_eq]
+@[simp] lemma mem_inter_get (H : (I ∩ J : set (ι → ℝ)).nonempty) :
+  x ∈ (I.inter J).get H ↔ x ∈ I ∧ x ∈ J :=
+by simp only [← mem_coe, coe_inter_get, mem_inter_eq]
 
-lemma inter_le_left (H : (I ∩ J : set (ι → ℝ)).nonempty) : I.inter J H ≤ I :=
-λ x hx, ((mem_inter H).1 hx).1
+@[simp] lemma mem_inter {J'} : J' ∈ I.inter J ↔ (J' : set (ι → ℝ)) = I ∩ J :=
+⟨λ ⟨H, Heq⟩, Heq ▸ coe_inter_get H,
+  λ H, ⟨by simpa [H] using J'.nonempty_coe, injective_coe $ by rw [coe_inter_get, H]⟩⟩
 
-lemma inter_le_right (H : (I ∩ J : set (ι → ℝ)).nonempty) : I.inter J H ≤ J :=
-λ x hx, ((mem_inter H).1 hx).2
+lemma bUnion_mem_inter_coe (I J : box ι) : (⋃ J' ∈ I.inter J, (J' : set (ι → ℝ))) = I ∩ J :=
+by simp [-mem_inter, part.mem_eq]
 
-@[simp] lemma le_inter_iff (H : (I ∩ J : set (ι → ℝ)).nonempty) {I'} :
-  I' ≤ I.inter J H ↔ I' ≤ I ∧ I' ≤ J :=
-by simp only [le_def, mem_inter, forall_and_distrib]
+@[simp] lemma bUnion_coe_eq_inter_coe (I J : box ι) :
+  (⋃ (J' : box ι) (hJ' : (J' : set (ι → ℝ)) = I ∩ J), (J' : set (ι → ℝ))) = I ∩ J :=
+by simpa using bUnion_mem_inter_coe I J
 
-lemma le_inter {J₁ J₂} (h₁ : I ≤ J₁) (h₂ : I ≤ J₂) :
-  I ≤ J₁.inter J₂ ⟨I.upper, h₁ I.upper_mem, h₂ I.upper_mem⟩ :=
-(le_inter_iff _).2 ⟨h₁, h₂⟩
+lemma inter_get_le_left (H : (I ∩ J : set (ι → ℝ)).nonempty) : (I.inter J).get H ≤ I :=
+λ x hx, ((mem_inter_get H).1 hx).1
 
-lemma inter_comm (H : (I ∩ J : set (ι → ℝ)).nonempty) :
-  I.inter J H = J.inter I (by rwa inter_comm) :=
-ext $ λ x, by simp [and.comm]
+lemma inter_get_le_right (H : (I ∩ J : set (ι → ℝ)).nonempty) : (I.inter J).get H ≤ J :=
+λ x hx, ((mem_inter_get H).1 hx).2
 
-lemma exists_eq_inter_iff {I J₁ J₂ : box ι} :
-  (∃ H, I = J₁.inter J₂ H) ↔ (I : set (ι → ℝ)) = J₁ ∩ J₂ :=
-⟨λ ⟨H, hI⟩, by rw [hI, coe_inter],
-  λ h, ⟨⟨I.upper, h ▸ I.upper_mem⟩, injective_coe $ by rwa coe_inter⟩⟩
+@[simp] lemma le_inter_get_iff (H : (I ∩ J : set (ι → ℝ)).nonempty) {I'} :
+  I' ≤ (I.inter J).get H ↔ I' ≤ I ∧ I' ≤ J :=
+by simp only [le_def, mem_inter_get, forall_and_distrib]
+
+lemma le_inter_get {J₁ J₂} (h₁ : I ≤ J₁) (h₂ : I ≤ J₂) :
+  I ≤ (J₁.inter J₂).get ⟨I.upper, h₁ I.upper_mem, h₂ I.upper_mem⟩ :=
+(le_inter_get_iff _).2 ⟨h₁, h₂⟩
+
+lemma inter_comm :
+  I.inter J = J.inter I :=
+by { ext, simp [inter_comm] }
+
+lemma inter_of_le (h : I ≤ J) : I.inter J = part.some I :=
+part.eq_some_iff.2 $ mem_inter.2 $ eq.symm $ by simpa
+
+lemma inter_of_ge (h : I ≤ J) : J.inter I = part.some I :=
+by rw [inter_comm, inter_of_le h]
 
 instance : has_sup (box ι) :=
 ⟨λ I J, ⟨I.lower ⊓ J.lower, I.upper ⊔ J.upper,
@@ -350,23 +362,20 @@ lemma bUnion_index_of_mem {πi : Π J ∈ π, partition J} (hJ : J ∈ π) {J'} 
 
 def restrict (π : partition I) (J : box ι) (H : J ≤ I) :
   partition J :=
-{ boxes := ⋃ (J' ∈ π) H, {J.inter J' H},
-  finite_boxes := π.finite_boxes.bUnion $ λ J' hJ', finite_Union_Prop $
-    λ _, finite_singleton _,
-  bUnion_boxes_coe := by simp_rw [bUnion_Union, bUnion_singleton,
-    box.coe_inter,  Union_nonempty_self, ← inter_Union, π.bUnion_mem_coe,
-    inter_eq_left_iff_subset, box.coe_subset_coe, H],
+{ boxes := ⋃ (J' ∈ π), {J'' | J'' ∈  J.inter J'},
+  finite_boxes := π.finite_boxes.bUnion $ λ J' hJ', (part.subsingleton _).finite,
+  bUnion_boxes_coe := by simp [← inter_Union, H],
   pairwise_disjoint :=
     begin
-      simp only [set.pairwise_on, mem_Union, mem_singleton_iff, on_fun],
-      rintro _ ⟨J₁, HJ₁, h₁, rfl⟩ _ ⟨J₂, HJ₂, h₂, rfl⟩ Hne,
-      rw [box.coe_inter, box.coe_inter],
-      refine ((π.disjoint_coe_of_mem HJ₁ HJ₂ _).inf_left' _).inf_right' _,
+      simp only [pairwise_on, on_fun, and_imp, box.mem_inter, exists_prop, mem_Union,
+        forall_exists_index, mem_set_of_eq, ne.def, ← box.coe_inj] { contextual := tt },
+      rintro - J₁ h₁ - - J₂ h₂ - Hne,
+      refine ((π.disjoint_coe_of_mem h₁ h₂ _).inf_left' _).inf_right' _,
       rintro rfl, exact Hne rfl
     end }
 
 @[simp] lemma mem_restrict (H : J ≤ I) :
-  J₁ ∈ π.restrict J H ↔ ∃ (J' ∈ π) h, J₁ = J.inter J' h :=
+  J₁ ∈ π.restrict J H ↔ ∃ (J' ∈ π), J₁ ∈ J.inter J' :=
 by simp [restrict]
 
 @[mono] lemma restrict_mono {π₁ π₂ : partition I} (H : J ≤ I) (Hle : π₁ ≤ π₂) :
@@ -376,11 +385,39 @@ begin
   rintro _ ⟨J₁, Hmem₁, Hne, rfl⟩,
   rcases Hle J₁ Hmem₁ with ⟨J₂, Hmem₂, Hle₂⟩,
   exact ⟨_, ⟨J₂, Hmem₂, _, rfl⟩,
-    box.le_inter (box.inter_le_left _) (le_trans (box.inter_le_right _) Hle₂)⟩,
+    box.le_inter_get (box.inter_get_le_left _) (le_trans (box.inter_get_le_right _) Hle₂)⟩
 end
 
-lemma monotone_restrict (H : J ≤ I) : monotone (λ π, restrict π J H) :=
+@[mono] lemma monotone_restrict (H : J ≤ I) : monotone (λ π, restrict π J H) :=
 λ π₁ π₂, restrict_mono H
+
+@[simp] lemma restrict_self : π.restrict I le_rfl = π :=
+begin
+  symmetry, ext J hJ,
+  rw mem_restrict,
+  refine ⟨J, hJ, _⟩,
+  rw [box.inter_of_ge (π.le_of_mem hJ), part.mem_some_iff]
+end
+
+@[simp] lemma restrict_bUnion (πi : Π J ∈ π, partition J) (hJ : J ∈ π) :
+  (π.bUnion πi).restrict J (π.le_of_mem hJ) = πi J hJ :=
+begin
+  symmetry, ext J' hJ',
+  simp only [mem_restrict, mem_bUnion, exists_prop],
+  refine ⟨J', ⟨J, hJ, hJ'⟩, _⟩,
+  rw [box.inter_of_ge (le_of_mem _ hJ'), part.mem_some_iff]
+end
+
+lemma bUnion_le_iff {πi : Π J ∈ π, partition J} {π' : partition I} :
+  π.bUnion πi ≤ π' ↔ ∀ J ∈ π, πi J ‹_› ≤ π'.restrict J (π.le_of_mem ‹_›) :=
+begin
+  fsplit; intros H J hJ,
+  { rw ← π.restrict_bUnion πi, exact monotone_restrict _ H },
+  { rw mem_bUnion at hJ, rcases hJ with ⟨J₁, h₁, hJ⟩,
+    rcases H J₁ h₁ hJ with ⟨J₂, h₂, Hle⟩,
+    rw mem_restrict at h₂, rcases h₂ with ⟨J₃, h₃, H, rfl⟩,
+    exact ⟨J₃, h₃, Hle.trans $ box.inter_get_le_right _⟩ }
+end
 
 instance : has_inf (partition I) :=
 ⟨λ π₁ π₂, π₁.bUnion (λ J hJ, π₂.restrict J (π₁.le_of_mem hJ))⟩
@@ -390,20 +427,19 @@ lemma inf_def (π₁ π₂ : partition I) :
 rfl
 
 @[simp] lemma mem_inf {π₁ π₂ : partition I} :
-  J ∈ π₁ ⊓ π₂ ↔ ∃ (J₁ ∈ π₁) (J₂ ∈ π₂) h, J = box.inter J₁ J₂ h :=
-by simp [has_inf.inf]
+  J ∈ π₁ ⊓ π₂ ↔ ∃ (J₁ ∈ π₁) (J₂ ∈ π₂), J ∈ box.inter J₁ J₂ :=
+by simp [inf_def]
 
-lemma inter_mem_inf {π₁ π₂ : partition I} (h₁ : J₁ ∈ π₁) (h₂ : J₂ ∈ π₂)
+lemma inter_get_mem_inf {π₁ π₂ : partition I} (h₁ : J₁ ∈ π₁) (h₂ : J₂ ∈ π₂)
   (H : (J₁ ∩ J₂ : set (ι → ℝ)).nonempty) :
-  J₁.inter J₂ H ∈ π₁ ⊓ π₂ :=
+  (J₁.inter J₂).get H ∈ π₁ ⊓ π₂ :=
 mem_inf.2 ⟨J₁, h₁, J₂, h₂, H, rfl⟩
 
 instance : semilattice_inf_top (partition I) :=
 { inf_le_left := λ π₁ π₂, π₁.bUnion_le _,
-  inf_le_right := λ π₁ π₂ J hJ, let ⟨J₁, hJ₁, J₂, hJ₂, Hne, hJ⟩ := mem_inf.1 hJ
-    in hJ.symm ▸ ⟨J₂, hJ₂, box.inter_le_right _⟩,
+  inf_le_right := λ π₁ π₂, (bUnion_le_iff _).2 (λ J hJ, le_rfl),
   le_inf := λ π π₁ π₂ h₁ h₂ J hJ, let ⟨J₁, hJ₁, hle₁⟩ := h₁ hJ, ⟨J₂, hJ₂, hle₂⟩ := h₂ hJ in
-    ⟨_, inter_mem_inf hJ₁ hJ₂ _, box.le_inter hle₁ hle₂⟩,
+    ⟨_, inter_get_mem_inf hJ₁ hJ₂ _, box.le_inter_get hle₁ hle₂⟩,
   .. partition.order_top, .. partition.has_inf }
 
 end partition
