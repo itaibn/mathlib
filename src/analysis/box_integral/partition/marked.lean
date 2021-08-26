@@ -42,8 +42,9 @@ variables {I J : box ι}
 def bUnion_marked (π : partition I) (πi : Π J ∈ π, marked_partition J) :
   marked_partition I :=
 { to_partition := π.bUnion (λ J hJ, (πi J ‹_›).to_partition),
-  mark' := λ J hJ, (πi (π.bUnion_index _ J hJ) (π.bUnion_index_mem hJ)).mark J,
-  mark_mem_Icc' := λ J hJ, box.le_iff_Icc.1 (π.bUnion_index_le _) ((πi _ _).mark_mem_Icc _) }
+  mark' := λ J hJ, (πi (π.bUnion_index _ J)
+    (π.bUnion_index_mem (λ J hJ, (πi J ‹_›).to_partition) J)).mark J,
+  mark_mem_Icc' := λ J hJ, box.le_iff_Icc.1 (π.bUnion_index_le _ _) ((πi _ _).mark_mem_Icc _) }
 
 @[simp] lemma mem_bUnion_marked (π : partition I) {πi : Π J ∈ π, marked_partition J} :
   J ∈ π.bUnion_marked πi ↔ ∃ J' ∈ π, J ∈ πi J' ‹_› :=
@@ -53,11 +54,9 @@ lemma mark_bUnion_marked (π : partition I) {πi : Π J ∈ π, marked_partition
   (hJ : J ∈ π) {J'} (hJ' : J' ∈ πi J hJ) :
   (π.bUnion_marked πi).mark J' = (πi J hJ).mark J' :=
 begin
-  obtain ⟨H', rfl⟩ : ∃ h, π.bUnion_index (λ J hJ, (πi J hJ).to_partition) J' h = J,
-    from ⟨_, π.bUnion_index_of_mem hJ hJ'⟩,
-  have : J' ∈ π.bUnion_marked πi, from H',
-  simp_rw [marked_partition.mark_of_mem _ this, bUnion_marked],
-  congr
+  have : J' ∈ π.bUnion_marked πi, from π.mem_bUnion.2 ⟨J, hJ, hJ'⟩,
+  obtain rfl := π.bUnion_index_of_mem hJ hJ',
+  simp_rw [marked_partition.mark_of_mem _ this, bUnion_marked]
 end
 
 lemma forall_bUnion_marked (p : (ι → ℝ) → box ι → Prop) (π : partition I)

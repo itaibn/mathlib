@@ -1,4 +1,6 @@
+import analysis.box_integral.partition.additive
 import analysis.box_integral.partition.filter
+import analysis.normed_space.basic
 
 open_locale big_operators classical topological_space
 open set function filter

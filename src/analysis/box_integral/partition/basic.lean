@@ -275,6 +275,8 @@ end
 protected lemma «exists» (hx : x ∈ I) : ∃ J ∈ π, x ∈ J :=
 (π.exists_unique hx).exists2
 
+lemma nonempty_boxes : π.boxes.nonempty := let ⟨J, hJ, _⟩ := π.exists I.upper_mem in ⟨J, hJ⟩
+
 @[ext] lemma eq_of_mem_imp_mem {π π' : partition I} (h : ∀ J ∈ π, J ∈ π') : π = π' :=
 begin
   suffices : π.boxes = π'.boxes, { cases π, cases π', congr, exact this },
@@ -301,13 +303,18 @@ instance : order_top (partition I) :=
 
 instance : inhabited (partition I) := ⟨⊤⟩
 
-lemma le_def {π π' : partition I} : π ≤ π' ↔ ∀ I ∈ π, ∃ I' ∈ π', I ≤ I' := iff.rfl
+lemma le_def {π π' : partition I} : π ≤ π' ↔ ∀ J ∈ π, ∃ J' ∈ π', J ≤ J' := iff.rfl
+
+lemma le_def' {π π' : partition I} : π ≤ π' ↔ ∀ (J ∈ π) (J' ∈ π') (x ∈ J) (h' : x ∈ J'), J ≤ J' :=
+begin
+  refine ⟨λ H J hJ J' hJ' x hx hx', _, λ H J hJ, _⟩,
+  { rcases H hJ with ⟨J'', hJ'', Hle⟩,
+    rwa π'.eq_of_mem_of_mem hJ' hJ'' hx' (Hle hx) },
+  { rcases π'.exists (π.le_of_mem hJ J.upper_mem) with ⟨J', hJ', hx'⟩,
+    exact ⟨J', hJ', H J hJ J' hJ' J.upper J.upper_mem hx'⟩ }
+end
 
 @[simp] lemma mem_top : J ∈ (⊤ : partition I) ↔ J = I := iff.rfl
-
-def sets (π : partition I) : set (set (ι → ℝ)) := coe '' π.boxes
-
-@[simp] lemma coe_mem_sets : ↑J ∈ π.sets ↔ J ∈ π := mem_image_of_injective box.injective_coe
 
 def bUnion (πi : Π J ∈ π, partition J) : partition I :=
 { boxes := ⋃ J ∈ π, (πi J ‹_›).boxes,
@@ -327,38 +334,52 @@ def bUnion (πi : Π J ∈ π, partition J) : partition I :=
   J ∈ π.bUnion πi ↔ ∃ J' ∈ π, J ∈ πi J' ‹_› :=
 by simp [bUnion]
 
-@[simp] lemma sets_bUnion (πi : Π J ∈ π, partition J) :
-  (π.bUnion πi).sets = ⋃ J ∈ π, (πi J ‹_›).sets :=
-by simp only [sets, image_Union, bUnion]
-
 lemma bUnion_le (πi : Π J ∈ π, partition J) : π.bUnion πi ≤ π :=
 λ J hJ, let ⟨J', hJ', hJ⟩ := π.mem_bUnion.1 hJ in ⟨J', hJ', (πi J' hJ').le_of_mem hJ⟩
 
-/-- Given a box `J ∈ π.bUnion πi`, returns the box `J' ∈ π` such that `J ∈ πi J' _`. -/
-def bUnion_index (πi : Π J ∈ π, partition J) (J : box ι) (hJ : J ∈ π.bUnion πi) :
-  box ι :=
-(π.mem_bUnion.1 hJ).some
+@[simp] lemma bUnion_top : π.bUnion (λ _ _, ⊤) = π :=
+eq.symm $ eq_of_mem_imp_mem $ λ J hJ, π.mem_bUnion.2 ⟨J, hJ, rfl⟩
 
-lemma bUnion_index_mem {πi : Π J ∈ π, partition J} (hJ : J ∈ π.bUnion πi) :
-  π.bUnion_index πi J hJ ∈ π :=
-(π.mem_bUnion.1 hJ).some_spec.fst
+/-- Given a box `J ∈ π.bUnion πi`, returns the box `J' ∈ π` such that `J ∈ πi J' _`. -/
+def bUnion_index (πi : Π J ∈ π, partition J) (J : box ι) :
+  box ι :=
+if hJ : J ∈ π.bUnion πi then (π.mem_bUnion.1 hJ).some else π.nonempty_boxes.some
+
+lemma bUnion_index_mem (πi : Π J ∈ π, partition J) (J : box ι) :
+  π.bUnion_index πi J ∈ π :=
+begin
+  rw bUnion_index, split_ifs with hJ,
+  exacts [(π.mem_bUnion.1 hJ).some_spec.fst, π.nonempty_boxes.some_spec]
+end
+
+lemma bUnion_index_le (πi : Π J ∈ π, partition J) (J : box ι) :
+  π.bUnion_index πi J ≤ I:=
+le_of_mem _ (π.bUnion_index_mem πi J)
 
 lemma mem_bUnion_index {πi : Π J ∈ π, partition J} (hJ : J ∈ π.bUnion πi) :
-  J ∈ πi (π.bUnion_index πi J hJ) (π.bUnion_index_mem hJ) :=
-(π.mem_bUnion.1 hJ).some_spec.snd
+  J ∈ πi (π.bUnion_index πi J) (π.bUnion_index_mem πi J) :=
+by convert (π.mem_bUnion.1 hJ).some_spec.snd; exact dif_pos hJ
 
 lemma le_bUnion_index {πi : Π J ∈ π, partition J} (hJ : J ∈ π.bUnion πi) :
-  J ≤ π.bUnion_index πi J hJ :=
+  J ≤ π.bUnion_index πi J :=
 le_of_mem _ (π.mem_bUnion_index hJ)
-
-lemma bUnion_index_le {πi : Π J ∈ π, partition J} (hJ : J ∈ π.bUnion πi) :
-  π.bUnion_index πi J hJ ≤ I:=
-le_of_mem _ (π.bUnion_index_mem hJ)
 
 /-- Uniqueness property of `box_integral.partition.bUnion_index`. -/
 lemma bUnion_index_of_mem {πi : Π J ∈ π, partition J} (hJ : J ∈ π) {J'} (hJ' : J' ∈ πi J hJ) :
-  π.bUnion_index πi J' (π.mem_bUnion.2 ⟨J, hJ, hJ'⟩) = J :=
-π.eq_of_le_of_le (π.bUnion_index_mem _) hJ (π.le_bUnion_index _) (le_of_mem _ hJ')
+  π.bUnion_index πi J' = J :=
+π.eq_of_le_of_le (π.bUnion_index_mem πi J') hJ (π.le_bUnion_index $ π.mem_bUnion.2 ⟨J, hJ, hJ'⟩)
+  (le_of_mem _ hJ')
+
+lemma bUnion_assoc (πi : Π J ∈ π, partition J) (πi' : Π (J ∈ π) (J' ∈ πi J ‹_›), partition J') :
+  π.bUnion (λ J hJ, (πi J hJ).bUnion (πi' J hJ)) = (π.bUnion πi).bUnion
+    (λ J hJ, πi' (π.bUnion_index πi J) (π.bUnion_index_mem πi J) _ (π.mem_bUnion_index hJ)) :=
+begin
+  ext J hJ, simp only [mem_bUnion] at *,
+  rcases hJ with ⟨J₁, h₁, J₂, h₂, H⟩,
+  refine ⟨J₂, π.mem_bUnion.2 ⟨J₁, h₁, h₂⟩, _⟩,
+  convert H,
+  exact π.bUnion_index_of_mem h₁ h₂
+end
 
 def restrict (π : partition I) (J : box ι) (H : J ≤ I) :
   partition J :=
