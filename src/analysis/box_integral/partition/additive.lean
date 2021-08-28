@@ -6,15 +6,15 @@ open function set
 
 namespace box_integral
 
-variables {ι G : Type*} [add_comm_group G]
+variables {ι M : Type*} [add_comm_monoid M]
 
 namespace box
 
-def split_edge_lower (I : box ι) (i : ι) (x : ℝ) (hx : x ∈ Ioo (I.lower i) (I.upper i)) :
+@[simps] def split_edge_lower (I : box ι) (i : ι) (x : ℝ) (hx : x ∈ Ioo (I.lower i) (I.upper i)) :
   box ι :=
 ⟨I.lower, update I.upper i x, forall_lt_update_iff.2 ⟨hx.1, λ j _, I.lower_lt_upper j⟩⟩
 
-def split_edge_upper (I : box ι) (i : ι) (x : ℝ) (hx : x ∈ Ioo (I.lower i) (I.upper i)) :
+@[simps] def split_edge_upper (I : box ι) (i : ι) (x : ℝ) (hx : x ∈ Ioo (I.lower i) (I.upper i)) :
   box ι :=
 ⟨update I.lower i x, I.upper, forall_update_lt_iff.2 ⟨hx.2, λ j _, I.lower_lt_upper j⟩⟩
 
@@ -61,6 +61,48 @@ by simp only [← coe_subset_coe, ← I.union_coe_split_edge i x hx, subset_unio
 
 lemma split_edge_upper_le (I : box ι) (i x hx) : I.split_edge_upper i x hx ≤ I :=
 by simp only [← coe_subset_coe, ← I.union_coe_split_edge i x hx, subset_union_right]
+
+lemma comap_split_edge_lower_of_not_mem_range {ι' : Type*} (I : box ι) (i x hx)
+  (f : ι' → ι) (h : i ∉ range f) :
+  comap f (split_edge_lower I i x hx) = comap f I :=
+begin
+  simp only [comap, preorder_hom.coe_fun_mk, split_edge_lower, funext_iff, (∘)],
+  exact ⟨λ _, rfl, λ j, update_noteq (mt (λ hi, mem_range.2 ⟨_, hi⟩) h) _ _⟩
+end
+
+lemma comap_split_edge_upper_of_not_mem_range {ι' : Type*} (I : box ι) (i x hx)
+  (f : ι' → ι) (h : i ∉ range f) :
+  comap f (split_edge_upper I i x hx) = comap f I :=
+begin
+  simp only [comap, preorder_hom.coe_fun_mk, split_edge_upper, funext_iff, (∘)],
+  exact ⟨λ j, update_noteq (mt (λ hi, mem_range.2 ⟨_, hi⟩) h) _ _, λ j, rfl⟩
+end
+
+lemma comap_coe_split_edge_lower_of_not_mem (I : box ι) (i x hx) {s : set ι} (hi : i ∉ s) :
+  comap (coe : s → ι) (split_edge_lower I i x hx) = comap coe I :=
+comap_split_edge_lower_of_not_mem_range I i x hx coe $ by rwa [subtype.range_coe]
+
+lemma comap_coe_split_edge_upper_of_not_mem (I : box ι) (i x hx) {s : set ι} (hi : i ∉ s) :
+  comap (coe : s → ι) (split_edge_upper I i x hx) = comap coe I :=
+comap_split_edge_upper_of_not_mem_range I i x hx coe $ by rwa [subtype.range_coe]
+
+lemma comap_coe_split_edge_lower_of_mem (I : box ι) (i x hx) {s : set ι} (hi : i ∈ s) :
+  comap (coe : s → ι) (split_edge_lower I i x hx) = split_edge_lower (comap coe I) ⟨i, hi⟩ x hx :=
+begin
+  simp only [comap, split_edge_lower, eq_update_iff, true_and, preorder_hom.coe_fun_mk,
+    eq_self_iff_true, comp_app],
+  refine ⟨update_same _ _ _, λ j hj, update_noteq _ _ _⟩,
+  rintro rfl, simpa only [subtype.coe_eta] using hj
+end
+
+lemma comap_coe_split_edge_upper_of_mem (I : box ι) (i x hx) {s : set ι} (hi : i ∈ s) :
+  comap (coe : s → ι) (split_edge_upper I i x hx) = split_edge_upper (comap coe I) ⟨i, hi⟩ x hx :=
+begin
+  simp only [comap, split_edge_upper, eq_update_iff, and_true, preorder_hom.coe_fun_mk,
+    eq_self_iff_true, comp_app],
+  refine ⟨update_same _ _ _, λ j hj, update_noteq _ _ _⟩,
+  rintro rfl, simpa only [subtype.coe_eta] using hj
+end
 
 end box
 
@@ -208,43 +250,81 @@ begin
   { rw [split_edge, dif_neg hx], exact H_top J hJ }
 end
 
+@[to_additive] lemma finprod_mem_bUnion {M : Type*} [comm_monoid M] {I : box ι} (π : partition I)
+  (πi : Π J ∈ π, partition J) (f : Π J ∈ π.bUnion πi, M) :
+  ∏ᶠ J ∈ π.bUnion πi, f J ‹_› = ∏ᶠ (J ∈ π) (J' ∈ πi J ‹_›), f J' (π.mem_bUnion.2 ⟨J, ‹_›, ‹_›⟩) :=
+begin
+  refine finprod_mem_bUnion' _ π.finite_boxes (λ J hJ, (πi J hJ).finite_boxes) _,
+  rintros J₁ h₁ J₂ h₂ hne J' ⟨h₁' : J' ∈ πi J₁ h₁, h₂' : J' ∈ πi J₂ h₂⟩,
+  exact hne (π.eq_of_le_of_le h₁ h₂ ((πi J₁ h₁).le_of_mem h₁') ((πi J₂ h₂).le_of_mem h₂'))
+end
+
 end partition
 
-def box_additive_on (lower upper : ι → ℝ) (f : (ι → ℝ) → (ι → ℝ) → G) :=
-∀ ⦃l u i x⦄, lower ≤ l → l ≤ u → u ≤ upper → l i ≤ x → x ≤ u i →
-  f l u = f l (update u i x) + f (update l i x) u
+open box partition
+
+def box_additive_on (f : box ι → M) (I : box ι) : Prop :=
+∀ (J ≤ I) i x hx, f (split_edge_lower J i x hx) + f (split_edge_upper J i x hx) = f J
 
 namespace box_additive_on
 
-variables {lower upper l u : ι → ℝ} {f : (ι → ℝ) → (ι → ℝ) → G} {i : ι}
+variables {I J : box ι} {f : box ι → M} {i : ι}
 
-lemma zero_of_eq (h : box_additive_on lower upper f) (hl : lower ≤ l) (hlu : l ≤ u) (hu : u ≤ upper)
-  (hi : l i = u i) : f l u = 0 :=
-begin
-  have := h hl hlu hu le_rfl hi.le,
-  rwa [update_eq_self, hi, update_eq_self, self_eq_add_left] at this
-end
+lemma add_monoid_hom_comp {N : Type*} [add_comm_monoid N] (h : box_additive_on f I) (g : M →+ N) :
+  box_additive_on (g ∘ f) I :=
+λ J hJ i x hx, by rw [← g.map_add, h J hJ i x hx]
 
-lemma finsum_mem_partition [fintype ι] {I : box ι} (h : box_additive_on I.lower I.upper f)
+lemma restrict (h : box_additive_on f I) (hle : J ≤ I) : box_additive_on f J :=
+λ J' hJ' i x hx, h J' (hJ'.trans hle) i x hx
+
+lemma finsum_mem_partition [fintype ι] (h : box_additive_on f I)
   (π : partition I) :
-  ∑ᶠ J ∈ π, f (J : _).lower J.upper = f I.lower I.upper :=
+  ∑ᶠ J ∈ π, f J = f I :=
 begin
   refine partition.split_edge_induction_on' π
-    (λ J s, ∑ᶠ J' ∈ s, f (J' : _).lower J'.upper = f J.lower J.upper) (λ J hJ, _)
+    (λ J s, ∑ᶠ J' ∈ s, f J' = f J) (λ J hJ, _)
     (λ J hJ i x hx, _) (λ J hJ π πi H, _),
   { simp },
   { rw finsum_mem_pair (J.split_edge_lower_ne_upper _ _ _),
-    exact (h (box.monotone_lower hJ) J.lower_le_upper (box.monotone_upper hJ) hx.1.le
-      hx.2.le).symm },
+    exact h J hJ i x hx },
   { refine eq.congr _ rfl,
-    dsimp only [partition.bUnion],
-    refine (finsum_mem_bUnion _ π.finite_boxes (λ J _, (πi J).finite_boxes)).trans _,
-    { rintros J₁ h₁ J₂ h₂ hne J' ⟨h₁' : J' ∈ πi J₁, h₂' : J' ∈ πi J₂⟩,
-      exact hne (π.eq_of_le_of_le h₁ h₂ ((πi J₁).le_of_mem h₁') ((πi J₂).le_of_mem h₂')) },
-    { exact finsum_mem_congr rfl H } }
+    exact (π.finsum_mem_bUnion (λ J _, πi J) _).trans (finsum_mem_congr rfl H) }
 end
 
 end box_additive_on
 
+open finset
+
+lemma box_additive_on_box_volume [fintype ι] (I : box ι) :
+  box_additive_on volume I :=
+begin
+  intros J hJ i x hx,
+  simp only [← prod_mul_prod_compl ({i} : finset ι), finset.prod_singleton, update_same,
+    add_mul, split_edge_lower, split_edge_upper, ← sub_add_sub_cancel' x (J.lower i) (J.upper i),
+    box.volume],
+  congr' 2; { apply prod_congr rfl, intros j hj, rw update_noteq, simpa using hj }
+end
+
+lemma box_additive_on_upper_sub_lower {G : Type*} [fintype ι] [add_comm_group G]
+  (I : box ι) (i : ι) (f : ℝ → box ({i}ᶜ : set ι) → G)
+  (H : ∀ x ∈ Icc (I.lower i) (I.upper i), box_additive_on (f x) (comap coe I)) :
+  box_additive_on (λ J : box ι, (f (J.upper i) (comap coe J) - f (J.lower i) (comap coe J))) I :=
+begin
+  intros J hJ j x hx,
+  rcases eq_or_ne i j with rfl|hne,
+  { have : i ∉ ({i}ᶜ : set ι), from not_not.2 rfl,
+    simp [comap_coe_split_edge_upper_of_not_mem _ _ _ _ this,
+      comap_coe_split_edge_lower_of_not_mem _ _ _ _ this] },
+  { have A : j ∈ ({i}ᶜ : set ι), from hne.symm,
+    simp only [comap_coe_split_edge_upper_of_mem _ _ _ _ A,
+      comap_coe_split_edge_lower_of_mem _ _ _ _ A,
+      split_edge_lower_lower, split_edge_lower_upper, split_edge_upper_lower,
+      split_edge_upper_upper, update_noteq hne],
+    have := λ y hy, H y hy (comap coe J) ((comap coe).monotone hJ) ⟨j, A⟩ x hx,
+    rw [← this, ← this],
+    { abel },
+    exacts [⟨monotone_lower hJ i, (J.lower_le_upper i).trans (monotone_upper hJ i)⟩,
+      ⟨(monotone_lower hJ i).trans (J.lower_le_upper i), monotone_upper hJ i⟩]}
+end
 
 end box_integral

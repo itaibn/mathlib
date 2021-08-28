@@ -42,7 +42,7 @@ We define the following operations on boxes:
 open set function
 
 noncomputable theory
-open_locale classical
+open_locale classical big_operators
 
 namespace box_integral
 
@@ -220,6 +220,24 @@ instance : semilattice_sup (box ι) :=
     sup_le (monotone_upper h₁) (monotone_upper h₂)⟩,
   .. box.partial_order, .. box.has_sup }
 
+@[simps] def comap {ι' : Type*} (f : ι → ι') : box ι' →ₘ box ι :=
+{ to_fun := λ I, ⟨I.lower ∘ f, I.upper ∘ f, λ i, I.lower_lt_upper (f i)⟩,
+  monotone' := λ I J Hle x hx i,
+    Ioc_subset_Ioc ((le_iff_bounds.1 Hle).1 _) ((le_iff_bounds.1 Hle).2 _) (hx _) }
+
+def volume [fintype ι] (I : box ι) : ℝ := ∏ i, (I.upper i - I.lower i)
+
+lemma volume_pos [fintype ι] (I : box ι) : 0 < I.volume :=
+finset.prod_pos (λ i _, sub_pos.2 $ I.lower_lt_upper i)
+
+@[simp] lemma volume_comap_coe_mul [fintype ι] (i : ι) (I : box ι) :
+  volume (comap (coe : ({i}ᶜ : set ι) → ι) I) * (I.upper i - I.lower i) = volume I :=
+begin
+  rw [volume, volume, ← finset.prod_compl_mul_prod ({i} : finset ι), finset.prod_singleton],
+  congr' 1,
+  convert (finset.prod_subtype _ _ _).symm; simp [funext_iff]
+end
+
 end box
 
 structure partition (I : box ι) :=
@@ -276,6 +294,10 @@ protected lemma «exists» (hx : x ∈ I) : ∃ J ∈ π, x ∈ J :=
 (π.exists_unique hx).exists2
 
 lemma nonempty_boxes : π.boxes.nonempty := let ⟨J, hJ, _⟩ := π.exists I.upper_mem in ⟨J, hJ⟩
+
+@[to_additive] lemma finprod_eq_prod {M : Type*} [comm_monoid M] (f : box ι → M) :
+  ∏ᶠ J ∈ π, f J = ∏ J in π.finite_boxes.to_finset, f J :=
+finprod_mem_eq_finite_to_finset_prod _ _
 
 @[ext] lemma eq_of_mem_imp_mem {π π' : partition I} (h : ∀ J ∈ π, J ∈ π') : π = π' :=
 begin

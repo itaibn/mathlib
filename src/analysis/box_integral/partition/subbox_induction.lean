@@ -1,7 +1,7 @@
 import analysis.box_integral.partition.marked
 import analysis.specific_limits
 
-open set function filter emetric
+open set function filter metric
 open_locale classical topological_space filter ennreal
 noncomputable theory
 
@@ -128,8 +128,8 @@ end box
 
 namespace marked_partition
 
-lemma exists_is_Henstock_is_subordinate_homothetic [fintype ι] (I : box ι) {r : (ι → ℝ) → ℝ≥0∞}
-  (h0 : ∀ x ∈ I.Icc, r x ≠ 0) :
+lemma exists_is_Henstock_is_subordinate_homothetic [fintype ι] (I : box ι) {r : (ι → ℝ) → ℝ}
+  (h0 : ∀ x ∈ I.Icc, 0 < r x) :
   ∃ π : marked_partition I, π.is_Henstock ∧ π.is_subordinate r ∧
     ∀ J ∈ π, ∃ n : ℕ, ∀ i, (J : _).upper i - J.lower i = (I.upper i - I.lower i) / 2 ^ n :=
 begin
@@ -141,9 +141,8 @@ begin
     refine ⟨n J₁ J' + 1, λ i, _⟩,
     simp only [hn J₁ h₁ J' h₂, box.upper_sub_lower_of_mem_split_center h₁, pow_succ,
       div_div_eq_div_mul] },
-  { replace h0 : 0 < r z, from pos_iff_ne_zero.2 (h0 z hz),
-    refine ⟨I.Icc ∩ closed_ball z (r z),
-      inter_mem_nhds_within _ (closed_ball_mem_nhds _ h0), _⟩,
+  { refine ⟨I.Icc ∩ closed_ball z (r z),
+      inter_mem_nhds_within _ (closed_ball_mem_nhds _ (h0 z hz)), _⟩,
     intros J Hle n Hmem HIcc Hsub,
     rw set.subset_inter_iff at HIcc,
     refine ⟨single _ _ Hmem, is_Henstock_single _, (is_subordinate_single _).2 HIcc.2, _⟩,
