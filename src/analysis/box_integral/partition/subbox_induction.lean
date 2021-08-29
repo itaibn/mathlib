@@ -1,5 +1,42 @@
-import analysis.box_integral.partition.marked
+/-
+Copyright (c) 2021 Yury Kudryashov. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yury Kudryashov
+-/
+import analysis.box_integral.partition.tagged
 import analysis.specific_limits
+
+/-!
+# Induction on subboxes
+
+In this file we prove (see
+`box_integral.tagged_partition.exists_is_Henstock_is_subordinate_homothetic`) that for every box `I`
+in `ℝⁿ` and a function `r : ℝⁿ → ℝ` positive on `I` there exists a tagged partition `π` of `I` such
+that
+
+* `π` is a Henstock partition;
+* `π` is subordinate to `r`;
+* each box in `π` is homothetic to `I` with coefficient of the form `1 / 2 ^ n`.
+
+Later we will use this lemma to prove that the Henstock filter is nontrivial, hence the Henstock
+integral is well-defined.
+
+We prove this lemma using a special kind of induction principle formulated in
+`box_integral.box.subbox_induction_on`. Let `p` be a predicate on `box ι`, let `I` be a box. Suppose
+that the following two properties hold true.
+
+* Consider a smaller box `J ≤ I`. The hyperplanes passing through the center of `J` split it into
+  `2 ^ n` boxes. If `p` holds true on each of these boxes, then it true on `J`.
+* For each `z` in the closed box `I.Icc` there exists a neighborhood `U` of `z` within `I.Icc` such
+  that for every box `J ≤ I` such that `z ∈ J.Icc ⊆ U`, if `J` is homothetic to `I` with a
+  coefficient of the form `1 / 2 ^ n`, then `p` is true on `J`.
+
+Then `p I` is true.
+
+## Tags
+
+partition, tagged partition, Henstock integral
+-/
 
 open set function filter metric
 open_locale classical topological_space filter ennreal
@@ -13,6 +50,9 @@ namespace box
 
 variables {I : box ι}
 
+/-- For a box `I`, the hyperplanes passing through its center split `I` into `2 ^ card ι` boxes.
+`box_integral.box.split_center_box I s` is one of these boxes. See also
+`box_integral.partition.split_center` for the corresponding `box_integral.partition`. -/
 def split_center_box (I : box ι) (s : set ι) : box ι :=
 { lower := s.piecewise (λ i, (I.lower i + I.upper i) / 2) I.lower,
   upper := s.piecewise I.upper (λ i, (I.lower i + I.upper i) / 2),
@@ -45,7 +85,11 @@ end
 lemma injective_split_center_box (I : box ι) : injective I.split_center_box :=
 λ s t H, by_contra $ λ Hne, (I.disjoint_split_center_box Hne).ne (nonempty_coe _).ne_empty (H ▸ rfl)
 
-lemma Union_coe_split_center_box (I : box ι) :
+/-- `box_integral.box.split_center_box` bundled as a `function.embeddinge`. -/
+@[simps] def split_center_box_emb (I : box ι) : set ι ↪ box ι :=
+⟨split_center_box I, injective_split_center_box I⟩
+
+@[simp] lemma Union_coe_split_center_box (I : box ι) :
   (⋃ s, (I.split_center_box s : set (ι → ℝ))) = I :=
 subset.antisymm (Union_subset $ λ s, I.split_center_box_le s) $
   λ y hy, mem_Union.2 ⟨{i | _ < y i}, mem_split_center_box.2 ⟨hy, λ i, iff.rfl⟩⟩
@@ -54,24 +98,50 @@ subset.antisymm (Union_subset $ λ s, I.split_center_box_le s) $
   (I.split_center_box s).upper i - (I.split_center_box s).lower i = (I.upper i - I.lower i) / 2 :=
 by by_cases hs : i ∈ s; field_simp [split_center_box, hs, mul_two, two_mul]
 
-def split_center [fintype ι] (I : box ι) : partition I :=
-{ boxes := range I.split_center_box,
-  finite_boxes := finite_range _,
-  bUnion_boxes_coe := by rw [bUnion_range, Union_coe_split_center_box],
-  pairwise_disjoint := by { rintro _ ⟨s, rfl⟩ _ ⟨t, rfl⟩ Hne,
-    exact I.disjoint_split_center_box (mt (congr_arg _) Hne) } }
+end box
 
-@[simp] lemma mem_split_center [fintype ι] {I J : box ι} :
-  J ∈ I.split_center ↔ ∃ s, J = I.split_center_box s :=
-mem_range.trans $ exists_congr $ λ s, eq_comm
+variables [fintype ι] {I J : box ι}
 
-lemma upper_sub_lower_of_mem_split_center [fintype ι] {J} (h : J ∈ I.split_center) (i : ι) :
+
+namespace partition
+
+/-- Split a box in `ℝⁿ` into `2 ^ n` boxes by hyperplanes passing through its center. -/
+def split_center (I : box ι) : partition I :=
+{ boxes := finset.univ.map (box.split_center_box_emb I),
+  bUnion_boxes_coe := by simp,
+  pairwise_disjoint :=
+    begin
+      rw [finset.coe_map, finset.coe_univ, image_univ],
+      rintro _ ⟨s, rfl⟩ _ ⟨t, rfl⟩ Hne,
+      exact I.disjoint_split_center_box (mt (congr_arg _) Hne)
+    end }
+
+@[simp] lemma mem_split_center : J ∈ split_center I ↔ ∃ s, J = I.split_center_box s :=
+by simp [split_center, eq_comm]
+
+lemma upper_sub_lower_of_mem_split_center (h : J ∈ split_center I) (i : ι) :
   J.upper i - J.lower i = (I.upper i - I.lower i) / 2 :=
 let ⟨s, hs⟩ := mem_split_center.1 h in hs.symm ▸ I.upper_sub_lower_split_center_box s i
 
+end partition
+
+namespace box
+
+open partition
+
+/-- Let `p` be a predicate on `box ι`, let `I` be a box. Suppose that the following two properties
+hold true.
+
+* Consider a smaller box `J ≤ I`. The hyperplanes passing through the center of `J` split it into
+  `2 ^ n` boxes. If `p` holds true on each of these boxes, then it true on `J`.
+* For each `z` in the closed box `I.Icc` there exists a neighborhood `U` of `z` within `I.Icc` such
+  that for every box `J ≤ I` such that `z ∈ J.Icc ⊆ U`, if `J` is homothetic to `I` with a
+  coefficient of the form `1 / 2 ^ n`, then `p` is true on `J`.
+
+Then `p I` is true. -/
 @[elab_as_eliminator]
-lemma subbox_induction_on [fintype ι] {p : box ι → Prop} (I : box ι)
-  (H_ind : ∀ J ≤ I, (∀ J' ∈ J.split_center, p J') → p J)
+lemma subbox_induction_on {p : box ι → Prop} (I : box ι)
+  (H_ind : ∀ J ≤ I, (∀ J' ∈ split_center J, p J') → p J)
   (H_nhds : ∀ z ∈ I.Icc, ∃ (U ∈ 𝓝[I.Icc] z), ∀ (J ≤ I) (n : ℕ), z ∈ J.Icc → J.Icc ⊆ U →
     (∀ i, J.upper i - J.lower i = (I.upper i - I.lower i) / 2 ^ n) → p J) :
   p I :=
@@ -105,7 +175,7 @@ begin
   have hJl_mem : ∀ n, (J n).lower ∈ I.Icc, from λ n, le_iff_Icc.1 (hJle n) (J n).lower_mem_Icc,
   have hJu_mem : ∀ n, (J n).upper ∈ I.Icc, from λ n, le_iff_Icc.1 (hJle n) (J n).upper_mem_Icc,
   have hJlz : tendsto (λ n, (J n).lower) at_top (𝓝 z),
-    from tendsto_at_top_csupr_pi' (monotone_lower.order_dual.comp hJmono)
+    from tendsto_at_top_csupr (monotone_lower.order_dual.comp hJmono)
       ⟨I.upper, λ x ⟨n, hn⟩, hn ▸ (hJl_mem n).2⟩,
   have hJuz : tendsto (λ n, (J n).upper) at_top (𝓝 z),
   { suffices : tendsto (λ n, (J n).upper - (J n).lower) at_top (𝓝 0), by simpa using hJlz.add this,
@@ -126,20 +196,31 @@ end
 
 end box
 
-namespace marked_partition
+namespace tagged_partition
 
-lemma exists_is_Henstock_is_subordinate_homothetic [fintype ι] (I : box ι) {r : (ι → ℝ) → ℝ}
+open partition
+
+/-- Let `I` be a box in `ℝⁿ` and `r : ℝⁿ → ℝ` be a function positive on the corresponding closed
+box. Then there exists a tagged partition `π` of `I` such that
+
+* `π` is a Henstock partition;
+* `π` is subordinate to `r`;
+* each box in `π` is homothetic to `I` with coefficient of the form `1 / 2 ^ n`.
+
+This lemma implies that the Henstock filter is nontrivial, hence the Henstock integral is
+well-defined. -/
+lemma exists_is_Henstock_is_subordinate_homothetic (I : box ι) {r : (ι → ℝ) → ℝ}
   (h0 : ∀ x ∈ I.Icc, 0 < r x) :
-  ∃ π : marked_partition I, π.is_Henstock ∧ π.is_subordinate r ∧
+  ∃ π : tagged_partition I, π.is_Henstock ∧ π.is_subordinate r ∧
     ∀ J ∈ π, ∃ n : ℕ, ∀ i, (J : _).upper i - J.lower i = (I.upper i - I.lower i) / 2 ^ n :=
 begin
   refine box.subbox_induction_on I (λ J hle hJ, _) (λ z hz, _),
   { choose! πi hHen hr n hn using hJ,
-    refine ⟨J.split_center.bUnion_marked (λ J _, πi J), is_Henstock_bUnion.2 hHen,
+    refine ⟨(split_center J).bUnion_tagged (λ J _, πi J), is_Henstock_bUnion.2 hHen,
       is_subordinate_bUnion.2 hr, λ J' hJ', _⟩,
-    rcases J.split_center.mem_bUnion_marked.1 hJ' with ⟨J₁, h₁, h₂⟩,
+    rcases (split_center J).mem_bUnion_tagged.1 hJ' with ⟨J₁, h₁, h₂⟩,
     refine ⟨n J₁ J' + 1, λ i, _⟩,
-    simp only [hn J₁ h₁ J' h₂, box.upper_sub_lower_of_mem_split_center h₁, pow_succ,
+    simp only [hn J₁ h₁ J' h₂, upper_sub_lower_of_mem_split_center h₁, pow_succ,
       div_div_eq_div_mul] },
   { refine ⟨I.Icc ∩ closed_ball z (r z),
       inter_mem_nhds_within _ (closed_ball_mem_nhds _ (h0 z hz)), _⟩,
@@ -150,7 +231,6 @@ begin
     refine ⟨0, λ i, _⟩, simp }
 end
 
-end marked_partition
+end tagged_partition
 
 end box_integral
-
