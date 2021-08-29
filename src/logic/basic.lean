@@ -915,7 +915,7 @@ by simp [and_comm]
 @[simp] theorem forall_eq' {a' : α} : (∀a, a' = a → p a) ↔ p a' :=
 by simp [@eq_comm _ a']
 
-theorem and_forall_ne {a : α} : (p a ∧ ∀ b ≠ a, p b) ↔ ∀ b, p b :=
+theorem and_forall_ne (a : α) : (p a ∧ ∀ b ≠ a, p b) ↔ ∀ b, p b :=
 by simp only [← @forall_eq _ p a, ← forall_and_distrib, ← or_imp_distrib, classical.em,
   forall_const]
 
