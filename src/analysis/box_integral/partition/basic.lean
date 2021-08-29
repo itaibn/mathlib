@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
 import topology.instances.real
+import data.finset.pimage
 
 /-!
 # Partitions of rectangular boxes in `ℝⁿ`
@@ -33,10 +34,28 @@ We define the following operations on boxes:
 
 * coercion to `set (ι → ℝ)` and `has_mem (ι → ℝ) (box_integral.box ι)` as described above;
 * a `partial_order` instance such that `I ≤ J` is equivalent to `(I : set (ι → ℝ)) ⊆ J`;
-* `box_integral.box.Icc`: the closed box `set.Icc I.lower I.upper`;
-* `box_integral.box.inter`: intersection of two boxes; this function assumes that the boxes have
-  nonempty intersection;
+* `box_integral.box.Icc`: the closed box `set.Icc I.lower I.upper`; defined as a bundled monotone
+  map from `box ι` to `set (ι → ℝ)`;
+* `box_integral.box.inter`: intersection of two boxes; this is a partial function in the sense that
+  its codomain is `part (box ι)`;
+* `box_integral.box.volume`: volume of a box defined as the product of `I.upper i - I.lower i` over
+  all `i : ι`.
 
+### Partitions
+
+Partition of a box `I` in `ℝⁿ` (see `box_integral.partition`) is a finite set of pairwise disjoint
+boxes such that their union is exactly `I`. We use `boxes : finset (box ι)` to store the set of
+boxes. In this file we define the following operations on partitions:
+
+* `box_integral.partition.bUnion`: split each box of a partition into smaller boxes;
+* `box_integral.partition.restrict`: restrict a partition to a smaller box.
+
+We also define a `semilattice_inf_top` structure on `box_integral.partition I` for all
+`I : box_integral.box ι`.
+
+## Tags
+
+partition
 -/
 
 open set function
@@ -220,11 +239,14 @@ instance : semilattice_sup (box ι) :=
     sup_le (monotone_upper h₁) (monotone_upper h₂)⟩,
   .. box.partial_order, .. box.has_sup }
 
+/-- `comap f I` is the box with corners `I.lower ∘ f` and `I.upper ∘ f`. Note that this definition
+ignores the values of `I.lower and `I.upper` outside of `range f`. -/
 @[simps] def comap {ι' : Type*} (f : ι → ι') : box ι' →ₘ box ι :=
 { to_fun := λ I, ⟨I.lower ∘ f, I.upper ∘ f, λ i, I.lower_lt_upper (f i)⟩,
   monotone' := λ I J Hle x hx i,
     Ioc_subset_Ioc ((le_iff_bounds.1 Hle).1 _) ((le_iff_bounds.1 Hle).2 _) (hx _) }
 
+/-- The volume of a box is the product `Π i, (I.upper i - I.lower i)`. -/
 def volume [fintype ι] (I : box ι) : ℝ := ∏ i, (I.upper i - I.lower i)
 
 lemma volume_pos [fintype ι] (I : box ι) : 0 < I.volume :=
@@ -240,11 +262,12 @@ end
 
 end box
 
+/-- Partition of a box `I` in `ℝⁿ` is a finite set of pairwise disjoint boxes such that their union
+is exactly `I`. -/
 structure partition (I : box ι) :=
-(boxes : set (box ι))
-(finite_boxes : finite boxes)
+(boxes : finset (box ι))
 (bUnion_boxes_coe : (⋃ J ∈ boxes, ↑(J : box ι)) = (I : set (ι → ℝ)))
-(pairwise_disjoint : boxes.pairwise_on (disjoint on (coe : box ι → set (ι → ℝ))))
+(pairwise_disjoint : pairwise_on ↑boxes (disjoint on (coe : box ι → set (ι → ℝ))))
 
 namespace partition
 
@@ -253,7 +276,7 @@ variables {I J J₁ J₂ : box ι} (π : partition I) {x : ι → ℝ}
 instance : has_mem (box ι) (partition I) := ⟨λ J π, J ∈ π.boxes⟩
 
 @[simp] lemma mem_boxes : J ∈ π.boxes ↔ J ∈ π := iff.rfl
-@[simp] lemma mem_mk {s h₁ h₂ h₃} : J ∈ (mk s h₁ h₂ h₃ : partition I) ↔ J ∈ s := iff.rfl
+@[simp] lemma mem_mk {s h₁ h₂} : J ∈ (mk s h₁ h₂ : partition I) ↔ J ∈ s := iff.rfl
 
 @[simp] lemma bUnion_mem_coe (π : partition I) :
   (⋃ J ∈ π, ↑J) = (I : set (ι → ℝ)) :=
@@ -295,14 +318,10 @@ protected lemma «exists» (hx : x ∈ I) : ∃ J ∈ π, x ∈ J :=
 
 lemma nonempty_boxes : π.boxes.nonempty := let ⟨J, hJ, _⟩ := π.exists I.upper_mem in ⟨J, hJ⟩
 
-@[to_additive] lemma finprod_eq_prod {M : Type*} [comm_monoid M] (f : box ι → M) :
-  ∏ᶠ J ∈ π, f J = ∏ J in π.finite_boxes.to_finset, f J :=
-finprod_mem_eq_finite_to_finset_prod _ _
-
 @[ext] lemma eq_of_mem_imp_mem {π π' : partition I} (h : ∀ J ∈ π, J ∈ π') : π = π' :=
 begin
   suffices : π.boxes = π'.boxes, { cases π, cases π', congr, exact this },
-  refine subset.antisymm h (λ J' hJ', _),
+  refine finset.subset.antisymm h (λ J' hJ', _),
   rcases J'.exists_mem with ⟨x, hx'⟩, rcases π.exists (π'.le_of_mem hJ' hx') with ⟨J, hJ, hx⟩,
   exact π'.eq_of_mem_of_mem (h J hJ) hJ' hx hx' ▸ hJ
 end
@@ -320,8 +339,8 @@ instance : order_top (partition I) :=
       obtain rfl : J' = J, from le_antisymm ‹_› ‹_›,
       assumption
     end,
-  top := ⟨{I}, finite_singleton _, bUnion_singleton _ _, pairwise_on_singleton _ _⟩,
-  le_top := λ π J hJ, ⟨I, rfl, π.le_of_mem hJ⟩ }
+  top := ⟨{I}, by simp, by simp⟩,
+  le_top := λ π J hJ, ⟨I, by simp, π.le_of_mem hJ⟩ }
 
 instance : inhabited (partition I) := ⟨⊤⟩
 
@@ -336,15 +355,23 @@ begin
     exact ⟨J', hJ', H J hJ J' hJ' J.upper J.upper_mem hx'⟩ }
 end
 
-@[simp] lemma mem_top : J ∈ (⊤ : partition I) ↔ J = I := iff.rfl
+@[simp] lemma mem_top : J ∈ (⊤ : partition I) ↔ J = I := finset.mem_singleton
 
+private def bUnion_boxes' (π : partition I) (πi : Π J ∈ π, partition J) : finset (box ι) :=
+π.boxes.attach.bUnion (λ J, (πi J J.2).boxes)
+
+private lemma mem_bUnion_boxes' {πi : Π J ∈ π, partition J} :
+  J ∈ bUnion_boxes' π πi ↔ ∃ J₁ ∈ π, J ∈ πi J₁ ‹_› :=
+by { simp [bUnion_boxes'], refl }
+
+/-- Given a partition `π` of a box `I` and a collection of partitions `π J hJ` of all boxes `J ∈ π`,
+returns the partition of `I` into the union of the boxes of all `πi J hJ`. -/
 def bUnion (πi : Π J ∈ π, partition J) : partition I :=
-{ boxes := ⋃ J ∈ π, (πi J ‹_›).boxes,
-  finite_boxes := π.finite_boxes.bUnion $ λ J hJ, (πi J hJ).finite_boxes,
-  bUnion_boxes_coe := by simp [Union_comm],
+{ boxes := bUnion_boxes' π πi,
+  bUnion_boxes_coe := by simp [mem_bUnion_boxes', Union_comm],
   pairwise_disjoint :=
     begin
-      simp only [pairwise_on, mem_Union],
+      simp only [pairwise_on, finset.mem_coe, mem_bUnion_boxes'],
       rintro J₁' ⟨J₁, hJ₁, hJ₁'⟩ J₂' ⟨J₂, hJ₂, hJ₂'⟩ Hne x ⟨hx₁, hx₂⟩, apply Hne,
       obtain rfl : J₁ = J₂,
         from π.eq_of_mem_of_mem hJ₁ hJ₂ ((πi J₁ hJ₁).le_of_mem hJ₁' hx₁)
@@ -354,15 +381,16 @@ def bUnion (πi : Π J ∈ π, partition J) : partition I :=
 
 @[simp] lemma mem_bUnion {πi : Π J ∈ π, partition J} :
   J ∈ π.bUnion πi ↔ ∃ J' ∈ π, J ∈ πi J' ‹_› :=
-by simp [bUnion]
+mem_bUnion_boxes' π
 
 lemma bUnion_le (πi : Π J ∈ π, partition J) : π.bUnion πi ≤ π :=
 λ J hJ, let ⟨J', hJ', hJ⟩ := π.mem_bUnion.1 hJ in ⟨J', hJ', (πi J' hJ').le_of_mem hJ⟩
 
 @[simp] lemma bUnion_top : π.bUnion (λ _ _, ⊤) = π :=
-eq.symm $ eq_of_mem_imp_mem $ λ J hJ, π.mem_bUnion.2 ⟨J, hJ, rfl⟩
+eq.symm $ eq_of_mem_imp_mem $ λ J hJ, π.mem_bUnion.2 ⟨J, hJ, mem_top.2 rfl⟩
 
-/-- Given a box `J ∈ π.bUnion πi`, returns the box `J' ∈ π` such that `J ∈ πi J' _`. -/
+/-- Given a box `J ∈ π.bUnion πi`, returns the box `J' ∈ π` such that `J ∈ πi J' _`.
+For `J ∉ π.bUnion πi`, returns some box `J' ∈ π`. -/
 def bUnion_index (πi : Π J ∈ π, partition J) (J : box ι) :
   box ι :=
 if hJ : J ∈ π.bUnion πi then (π.mem_bUnion.1 hJ).some else π.nonempty_boxes.some
@@ -403,15 +431,15 @@ begin
   exact π.bUnion_index_of_mem h₁ h₂
 end
 
+/-- Restrict a partition to a smaller box. -/
 def restrict (π : partition I) (J : box ι) (H : J ≤ I) :
   partition J :=
-{ boxes := ⋃ (J' ∈ π), {J'' | J'' ∈  J.inter J'},
-  finite_boxes := π.finite_boxes.bUnion $ λ J' hJ', (part.subsingleton _).finite,
+{ boxes := π.boxes.pimage J.inter,
   bUnion_boxes_coe := by simp [← inter_Union, H],
   pairwise_disjoint :=
     begin
-      simp only [pairwise_on, on_fun, and_imp, box.mem_inter, exists_prop, mem_Union,
-        forall_exists_index, mem_set_of_eq, ne.def, ← box.coe_inj] { contextual := tt },
+      simp only [pairwise_on, on_fun, finset.coe_pimage, pfun.mem_image, forall_exists_index,
+        finset.mem_coe, mem_boxes, box.mem_inter, ← box.coe_inj, ne.def] { contextual := tt },
       rintro - J₁ h₁ - - J₂ h₂ - Hne,
       refine ((π.disjoint_coe_of_mem h₁ h₂ _).inf_left' _).inf_right' _,
       rintro rfl, exact Hne rfl
