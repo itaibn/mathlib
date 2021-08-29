@@ -492,7 +492,7 @@ finprod_mem_mul_distrib' (hs.inter_of_left _) (hs.inter_of_left _)
 @[to_additive] lemma finprod_mem_div_distrib {G : Type*} [comm_group G]
   {f g : α → G} (hs : s.finite) :
   ∏ᶠ i ∈ s, (f i / g i) = (∏ᶠ i ∈ s, f i) / (∏ᶠ i ∈ s, g i) :=
-by simp only [div_eq_mul_inv, finprod_mem_mul_distrib hs, finprod_inv_distrib] 
+by simp only [div_eq_mul_inv, finprod_mem_mul_distrib hs, finprod_inv_distrib]
 
 @[to_additive] lemma monoid_hom.map_finprod {f : α → M} (g : M →* N) (hf : (mul_support f).finite) :
   g (∏ᶠ i, f i) = ∏ᶠ i, g (f i) :=
