@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kexing Ying
 -/
 import group_theory.submonoid
+import group_theory.submonoid.center
 import algebra.group.conj
 import algebra.pointwise
 import order.atoms
@@ -81,7 +82,7 @@ membership of a subgroup's underlying set.
 subgroup, subgroups
 -/
 
-open_locale big_operators
+open_locale big_operators pointwise
 
 variables {G : Type*} [group G]
 variables {A : Type*} [add_group A]
@@ -527,25 +528,25 @@ lemma mem_Sup_of_mem {S : set (subgroup G)} {s : subgroup G}
   (hs : s ∈ S) : ∀ {x : G}, x ∈ s → x ∈ Sup S :=
 show s ≤ Sup S, from le_Sup hs
 
-@[to_additive]
-lemma subsingleton_iff : subsingleton G ↔ subsingleton (subgroup G) :=
-⟨ λ h, by exactI ⟨λ x y, subgroup.ext $ λ i, subsingleton.elim 1 i ▸ by simp [subgroup.one_mem]⟩,
-  λ h, by exactI ⟨λ x y,
+@[simp, to_additive]
+lemma subsingleton_iff : subsingleton (subgroup G) ↔ subsingleton G :=
+⟨ λ h, by exactI ⟨λ x y,
     have ∀ i : G, i = 1 := λ i, mem_bot.mp $ subsingleton.elim (⊤ : subgroup G) ⊥ ▸ mem_top i,
-    (this x).trans (this y).symm⟩⟩
+    (this x).trans (this y).symm⟩,
+  λ h, by exactI ⟨λ x y, subgroup.ext $ λ i, subsingleton.elim 1 i ▸ by simp [subgroup.one_mem]⟩⟩
 
-@[to_additive]
-lemma nontrivial_iff : nontrivial G ↔ nontrivial (subgroup G) :=
+@[simp, to_additive]
+lemma nontrivial_iff : nontrivial (subgroup G) ↔ nontrivial G :=
 not_iff_not.mp (
   (not_nontrivial_iff_subsingleton.trans subsingleton_iff).trans
   not_nontrivial_iff_subsingleton.symm)
 
 @[to_additive]
 instance [subsingleton G] : unique (subgroup G) :=
-⟨⟨⊥⟩, λ a, @subsingleton.elim _ (subsingleton_iff.mp ‹_›) a _⟩
+⟨⟨⊥⟩, λ a, @subsingleton.elim _ (subsingleton_iff.mpr ‹_›) a _⟩
 
 @[to_additive]
-instance [nontrivial G] : nontrivial (subgroup G) := nontrivial_iff.mp ‹_›
+instance [nontrivial G] : nontrivial (subgroup G) := nontrivial_iff.mpr ‹_›
 
 @[to_additive] lemma eq_top_iff' : H = ⊤ ↔ ∀ x : G, x ∈ H :=
 eq_top_iff.trans ⟨λ h m, h $ mem_top m, λ h m _, h m⟩
@@ -1006,15 +1007,18 @@ instance top_normal : normal (⊤ : subgroup G) := ⟨λ _ _, mem_top⟩
 
 variable (G)
 /-- The center of a group `G` is the set of elements that commute with everything in `G` -/
-@[to_additive "The center of a group `G` is the set of elements that commute with everything in
-`G`"]
+@[to_additive "The center of an additive group `G` is the set of elements that commute with
+everything in `G`"]
 def center : subgroup G :=
-{ carrier := {z | ∀ g, g * z = z * g},
-  one_mem' := by simp,
-  mul_mem' := λ a b (ha : ∀ g, g * a = a * g) (hb : ∀ g, g * b = b * g) g,
-    by assoc_rw [ha, hb g],
-  inv_mem' := λ a (ha : ∀ g, g * a = a * g) g,
-    by rw [← inv_inj, mul_inv_rev, inv_inv, ← ha, mul_inv_rev, inv_inv] }
+{ carrier := set.center G,
+  inv_mem' := λ a, set.inv_mem_center,
+  .. submonoid.center G }
+
+@[to_additive]
+lemma coe_center : ↑(center G) = set.center G := rfl
+
+@[simp, to_additive]
+lemma center_to_submonoid : (center G).to_submonoid = submonoid.center G := rfl
 
 variable {G}
 
@@ -2243,6 +2247,10 @@ instance
   [has_scalar α β] [mul_action G α] [mul_action G β] [is_scalar_tower G α β] (S : subgroup G) :
   is_scalar_tower S α β :=
 S.to_submonoid.is_scalar_tower
+
+instance [mul_action G α] [has_faithful_scalar G α] (S : subgroup G) :
+  has_faithful_scalar S α :=
+S.to_submonoid.has_faithful_scalar
 
 /-- The action by a subgroup is the action by the underlying group. -/
 instance [add_monoid α] [distrib_mul_action G α] (S : subgroup G) : distrib_mul_action S α :=
