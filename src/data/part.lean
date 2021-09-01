@@ -130,6 +130,12 @@ lemma get_eq_get_of_eq (a : part α) (ha : a.dom) {b : part α} (h : a = b) :
   a.get ha = b.get (h ▸ ha) :=
 by { congr, exact h }
 
+lemma get_eq_iff_mem {o : part α} {a : α} (h : o.dom) : o.get h = a ↔ a ∈ o :=
+⟨λ H, ⟨h, H⟩, λ ⟨h', H⟩, H⟩
+
+lemma eq_get_iff_mem {o : part α} {a : α} (h : o.dom) : a = o.get h ↔ a ∈ o :=
+eq_comm.trans (get_eq_iff_mem h)
+
 instance none_decidable : decidable (@none α).dom := decidable.false
 instance some_decidable (a : α) : decidable (some a).dom := decidable.true
 
@@ -138,10 +144,11 @@ otherwise. -/
 def get_or_else (a : part α) [decidable a.dom] (d : α) :=
 if ha : a.dom then a.get ha else d
 
-@[simp] lemma get_or_else_none (d : α) : get_or_else none d = d :=
+@[simp] lemma get_or_else_none (d : α) [decidable (none : part α).dom] : get_or_else none d = d :=
 dif_neg id
 
-@[simp] lemma get_or_else_some (a : α) (d : α) : get_or_else (some a) d = a :=
+@[simp] lemma get_or_else_some (a : α) (d : α) [decidable (some a).dom] :
+  get_or_else (some a) d = a :=
 dif_pos trivial
 
 @[simp] theorem mem_to_option {o : part α} [decidable o.dom] {a : α} :
@@ -235,7 +242,7 @@ protected def bind (f : part α) (g : α → part β) : part β :=
 assert (dom f) (λb, g (f.get b))
 
 /-- The map operation for `part` just maps the value and maintains the same domain. -/
-def map (f : α → β) (o : part α) : part β :=
+@[simps] def map (f : α → β) (o : part α) : part β :=
 ⟨o.dom, f ∘ o.get⟩
 
 theorem mem_map (f : α → β) {o : part α} :
@@ -363,14 +370,14 @@ instance : monad_fail part :=
 
 /-- `restrict p o h` replaces the domain of `o` with `p`, and is well defined when
   `p` implies `o` is defined. -/
-def restrict (p : Prop) : ∀ (o : part α), (p → o.dom) → part α
-| ⟨d, f⟩ H := ⟨p, λh, f (H h)⟩
+def restrict (p : Prop) (o : part α) (H : p → o.dom) : part α :=
+⟨p, λh, o.get (H h)⟩
 
 @[simp]
 theorem mem_restrict (p : Prop) (o : part α) (h : p → o.dom) (a : α) :
   a ∈ restrict p o h ↔ p ∧ a ∈ o :=
 begin
-  cases o, dsimp [restrict, mem_eq], split,
+  dsimp [restrict, mem_eq], split,
   { rintro ⟨h₀, h₁⟩, exact ⟨h₀, ⟨_, h₁⟩⟩ },
   rintro ⟨h₀, h₁, h₂⟩, exact ⟨h₀, h₂⟩
 end

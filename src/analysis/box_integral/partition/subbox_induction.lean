@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
 import analysis.box_integral.partition.tagged
+import analysis.box_integral.partition.split_induction
 import analysis.specific_limits
 
 /-!
@@ -38,7 +39,7 @@ Then `p I` is true.
 partition, tagged partition, Henstock integral
 -/
 
-open set function filter metric
+open set finset function filter metric
 open_locale classical topological_space filter ennreal
 noncomputable theory
 
@@ -46,69 +47,16 @@ namespace box_integral
 
 variables {ι : Type*}
 
-namespace box
-
-variables {I : box ι}
-
-/-- For a box `I`, the hyperplanes passing through its center split `I` into `2 ^ card ι` boxes.
-`box_integral.box.split_center_box I s` is one of these boxes. See also
-`box_integral.partition.split_center` for the corresponding `box_integral.partition`. -/
-def split_center_box (I : box ι) (s : set ι) : box ι :=
-{ lower := s.piecewise (λ i, (I.lower i + I.upper i) / 2) I.lower,
-  upper := s.piecewise I.upper (λ i, (I.lower i + I.upper i) / 2),
-  lower_lt_upper := λ i, by { dunfold set.piecewise, split_ifs;
-    simp only [left_lt_add_div_two, add_div_two_lt_right, I.lower_lt_upper] } }
-
-lemma mem_split_center_box {s : set ι} {y : ι → ℝ} :
-  y ∈ I.split_center_box s ↔ y ∈ I ∧ ∀ i, (I.lower i + I.upper i) / 2 < y i ↔ i ∈ s :=
-begin
-  simp only [split_center_box, mem_def, ← forall_and_distrib],
-  refine forall_congr (λ i, _),
-  dunfold set.piecewise,
-  split_ifs with hs; simp only [hs, iff_true, iff_false, not_lt],
-  exacts [⟨λ H, ⟨⟨(left_lt_add_div_two.2 (I.lower_lt_upper i)).trans H.1, H.2⟩, H.1⟩, λ H, ⟨H.2, H.1.2⟩⟩,
-    ⟨λ H, ⟨⟨H.1, H.2.trans (add_div_two_lt_right.2 (I.lower_lt_upper i)).le⟩, H.2⟩, λ H, ⟨H.1.1, H.2⟩⟩]
-end
-
-lemma split_center_box_le (I : box ι) (s : set ι) : I.split_center_box s ≤ I :=
-λ x hx, (mem_split_center_box.1 hx).1
-
-lemma disjoint_split_center_box (I : box ι) {s t : set ι} (h : s ≠ t) :
-  disjoint (I.split_center_box s : set (ι → ℝ)) (I.split_center_box t) :=
-begin
-  rintro y ⟨hs, ht⟩, apply h,
-  ext i,
-  rw [mem_coe, mem_split_center_box] at hs ht,
-  rw [← hs.2, ← ht.2]
-end
-
-lemma injective_split_center_box (I : box ι) : injective I.split_center_box :=
-λ s t H, by_contra $ λ Hne, (I.disjoint_split_center_box Hne).ne (nonempty_coe _).ne_empty (H ▸ rfl)
-
-/-- `box_integral.box.split_center_box` bundled as a `function.embeddinge`. -/
-@[simps] def split_center_box_emb (I : box ι) : set ι ↪ box ι :=
-⟨split_center_box I, injective_split_center_box I⟩
-
-@[simp] lemma Union_coe_split_center_box (I : box ι) :
-  (⋃ s, (I.split_center_box s : set (ι → ℝ))) = I :=
-subset.antisymm (Union_subset $ λ s, I.split_center_box_le s) $
-  λ y hy, mem_Union.2 ⟨{i | _ < y i}, mem_split_center_box.2 ⟨hy, λ i, iff.rfl⟩⟩
-
-@[simp] lemma upper_sub_lower_split_center_box (I : box ι) (s : set ι) (i : ι) :
-  (I.split_center_box s).upper i - (I.split_center_box s).lower i = (I.upper i - I.lower i) / 2 :=
-by by_cases hs : i ∈ s; field_simp [split_center_box, hs, mul_two, two_mul]
-
-end box
 
 variables [fintype ι] {I J : box ι}
-
 
 namespace partition
 
 /-- Split a box in `ℝⁿ` into `2 ^ n` boxes by hyperplanes passing through its center. -/
 def split_center (I : box ι) : partition I :=
 { boxes := finset.univ.map (box.split_center_box_emb I),
-  bUnion_boxes_coe := by simp,
+  le_of_mem' := by simp [I.split_center_box_le],
+  exists_mem' := λ x hx, by simp [hx],
   pairwise_disjoint :=
     begin
       rw [finset.coe_map, finset.coe_univ, image_univ],
@@ -179,7 +127,7 @@ begin
       ⟨I.upper, λ x ⟨n, hn⟩, hn ▸ (hJl_mem n).2⟩,
   have hJuz : tendsto (λ n, (J n).upper) at_top (𝓝 z),
   { suffices : tendsto (λ n, (J n).upper - (J n).lower) at_top (𝓝 0), by simpa using hJlz.add this,
-    refine tendsto_pi.2 (λ i, _),
+    refine tendsto_pi_nhds.2 (λ i, _),
     simpa [hJsub] using tendsto_const_nhds.div_at_top
       (tendsto_pow_at_top_at_top_of_one_lt (@one_lt_two ℝ _ _)) },
   replace hJlz : tendsto (λ n, (J n).lower) at_top (𝓝[Icc I.lower I.upper] z),
@@ -209,15 +157,20 @@ box. Then there exists a tagged partition `π` of `I` such that
 
 This lemma implies that the Henstock filter is nontrivial, hence the Henstock integral is
 well-defined. -/
-lemma exists_is_Henstock_is_subordinate_homothetic (I : box ι) {r : (ι → ℝ) → ℝ}
+lemma exists_is_Henstock_is_subordinate_homothetic {I : box ι} {r : (ι → ℝ) → ℝ}
   (h0 : ∀ x ∈ I.Icc, 0 < r x) :
   ∃ π : tagged_partition I, π.is_Henstock ∧ π.is_subordinate r ∧
-    ∀ J ∈ π, ∃ n : ℕ, ∀ i, (J : _).upper i - J.lower i = (I.upper i - I.lower i) / 2 ^ n :=
+    (∀ J ∈ π, ∃ n : ℕ, ∀ i, (J : _).upper i - J.lower i = (I.upper i - I.lower i) / 2 ^ n) ∧
+    π.distortion = I.distortion :=
 begin
   refine box.subbox_induction_on I (λ J hle hJ, _) (λ z hz, _),
-  { choose! πi hHen hr n hn using hJ,
-    refine ⟨(split_center J).bUnion_tagged (λ J _, πi J), is_Henstock_bUnion.2 hHen,
-      is_subordinate_bUnion.2 hr, λ J' hJ', _⟩,
+  { choose! πi hHen hr Hn Hd using hJ, choose! n hn using Hn,
+    refine ⟨(split_center J).bUnion_tagged πi, is_Henstock_bUnion.2 hHen,
+      is_subordinate_bUnion.2 hr, (and_iff_left_of_imp _).2 _⟩,
+    { refine λ H, partition.distortion_of_const _ (λ J' h', _),
+      rcases H J' h' with ⟨n, hn⟩,
+      exact box.distortion_eq_of_sub_eq_div hn },
+    intros J' hJ',
     rcases (split_center J).mem_bUnion_tagged.1 hJ' with ⟨J₁, h₁, h₂⟩,
     refine ⟨n J₁ J' + 1, λ i, _⟩,
     simp only [hn J₁ h₁ J' h₂, upper_sub_lower_of_mem_split_center h₁, pow_succ,
@@ -228,9 +181,103 @@ begin
     rw set.subset_inter_iff at HIcc,
     refine ⟨single _ _ Hmem, is_Henstock_single _, (is_subordinate_single _).2 HIcc.2, _⟩,
     simp only [mem_single, forall_eq],
-    refine ⟨0, λ i, _⟩, simp }
+    refine ⟨⟨0, λ i, _⟩, distortion_single _⟩, simp }
 end
 
 end tagged_partition
+
+namespace tagged_prepartition
+
+/-- For any tagged prepartition `π` of `I` subordinate to a function `r` positive on `I.Icc`, there
+exists a tagged partition `π'` such that
+
+* `π'` is subordinate to the same function `r`;
+* `π ⊆ π'` and their `tag` functions agree on `J ∈ π`;
+* `π'` is Henstock outside of `π`, i.e., `π'.tag J ∈ J.Icc` for any box `J ∈ π'`, `J ∉ π`;
+* `π'` has a predictable distortion; namely, its distortion equals the distortion of
+  `π.to_prepartition.to_partition`. -/
+lemma exists_tagged_partition_superset_is_subordinate {I : box ι} {r : (ι → ℝ) → ℝ}
+  {π : tagged_prepartition I} (h0 : ∀ x ∈ I.Icc, 0 < r x) (hr : π.is_subordinate r) :
+  ∃ π' : tagged_partition I, π'.is_subordinate r ∧ (∀ J ∈ π, J ∈ π') ∧
+    (∀ J ∈ π, π.tag J = π'.tag J) ∧ (∀ J ∈ π', J ∉ π → π'.tag J ∈ J.Icc) ∧
+    (π'.distortion = π.to_prepartition.to_partition.distortion) :=
+begin
+  set πp : partition I := π.to_prepartition.to_partition,
+  have : ∀ J ∈ πp, ∃ π' : tagged_partition J, π'.is_Henstock ∧ π'.is_subordinate r ∧
+    (∀ J' ∈ π', ∃ n : ℕ, ∀ i, (J' : _).upper i - J'.lower i = (J.upper i - J.lower i) / 2 ^ n) ∧
+    π'.distortion = J.distortion,
+    from λ J hJ, tagged_partition.exists_is_Henstock_is_subordinate_homothetic
+      (λ x hx, h0 x (box.le_iff_Icc.1 (πp.le_of_mem hJ) hx)),
+  choose! πi hiHen hir hsub Hd, clear hsub,
+  set π' : partition I := πp.bUnion (π.boxes.piecewise (λ _, ⊤) (λ J, (πi J).to_partition)),
+  set tag : box ι → ι → ℝ :=
+     π.boxes.piecewise π.tag (λ J, (πi (πp.bUnion_index (λ J', (πi J').to_partition) J)).tag J),
+  have Htag_π : ∀ J ∈ π, tag J = π.tag J, from λ J, π.boxes.piecewise_eq_of_mem _ _,
+  have Htag_πi : ∀ J ∉ π, tag J = (πi (πp.bUnion_index (λ J', (πi J').to_partition) J)).tag J,
+    from λ J, π.boxes.piecewise_eq_of_not_mem _ _,
+  have HtagI : ∀ J, tag J ∈ I.Icc,
+  { intro J,
+    by_cases hJπ : J ∈ π,
+    { rw Htag_π _ hJπ, exact π.tag_mem_Icc J },
+    { rw Htag_πi _ hJπ,
+      exact box.le_iff_Icc.1 (πp.bUnion_index_le _ _) ((πi _).tag_mem_Icc J) } },
+  set πt : tagged_partition I := ⟨⟨π'.to_prepartition, tag, HtagI⟩, π'.exists_mem'⟩,
+  have mem_πt : ∀ J, J ∈ πt → J ∉ π → ∃ Jp ∈ πp, Jp ∉ π ∧ J ∈ πi Jp,
+  { rintros J hJ hJπ,
+    replace hJ := πp.mem_bUnion.1 hJ, rcases hJ with ⟨Jp, hJp, hJ⟩,
+    have : Jp ∉ π,
+    { intro H,
+      rw [π.boxes.piecewise_eq_of_mem _ _ H, partition.mem_top] at hJ,
+      rw hJ at hJπ, exact hJπ H },
+    rw [π.boxes.piecewise_eq_of_not_mem _ _ this] at hJ,
+    exact ⟨Jp, hJp, this, hJ⟩ },
+  have : ∀ p : (ι → ℝ) → box ι → Prop, (∀ J ∈ π, p (π.tag J) J) →
+    (∀ J ∉ π, J ∈ πp → ∀ Ji ∈ πi J, p ((πi J).tag Ji) Ji) → ∀ J ∈ πt, p (πt.tag J) J,
+  { rintros p hpπ hpπ' J hJ,
+    by_cases hJπ : J ∈ π,
+    { convert hpπ _ hJπ using 1,exact Htag_π _ hJπ },
+    { rcases mem_πt J hJ hJπ with ⟨Jp, hJp, hJpπ, hJ⟩,
+      simp only [πt, Htag_πi J hJπ],
+      rw πp.bUnion_index_of_mem; [skip, exact hJp, exact hJ],
+      exact hpπ' _ hJpπ hJp _ hJ } },
+  refine ⟨πt, _, _, _, _, _⟩,
+  { exact this (λ x J, J.Icc ⊆ closed_ball x (r x)) hr (λ J hJ hJp, (hir _ hJp)) },
+  { intros J hJ,
+    refine πp.mem_bUnion.2 ⟨J, π.to_prepartition.subset_to_partition hJ, _⟩,
+    rw [π.boxes.piecewise_eq_of_mem _ _ hJ, partition.mem_top] },
+  { exact λ J hJ, (Htag_π J hJ).symm },
+  { intros J hJ hJ',
+    rcases mem_πt J hJ hJ' with ⟨Jp, hJp, hJpπ, hJ⟩,
+    simp only [πt, Htag_πi _ hJ'],
+    rw [πp.bUnion_index_of_mem]; [skip, exact hJp, exact hJ],
+    exact hiHen _ hJp _ hJ },
+  { refine (πp.distortion_bUnion _).trans (sup_congr rfl $ λ J hJ, _),
+    by_cases h : J ∈ π,
+    { rw [π.boxes.piecewise_eq_of_mem _ _ h, partition.distortion_top] },
+    { rw [π.boxes.piecewise_eq_of_not_mem _ _ h],
+      exact Hd J hJ } }
+end
+
+def to_subordinate_tagged_partition (π : tagged_prepartition I) (r : (ι → ℝ) → ℝ)
+  (h0 : ∀ x ∈ I.Icc, 0 < r x) (hr : π.is_subordinate r) :
+  tagged_partition I :=
+(exists_tagged_partition_superset_is_subordinate h0 hr).some
+
+variables {π : tagged_prepartition I} {r : (ι → ℝ) → ℝ}
+
+lemma is_subordinate.to_subordinate_tagged_partition (hr : π.is_subordinate r)
+  (h0 : ∀ x ∈ I.Icc, 0 < r x) :
+  (π.to_subordinate_tagged_partition r h0 hr).is_subordinate r :=
+(exists_tagged_partition_superset_is_subordinate h0 hr).some_spec.1
+
+lemma is_subordinate.mem_to_subordinate_tagged_partition (hr : π.is_subordinate r)
+  (h0 : ∀ x ∈ I.Icc, 0 < r x) (hJ : J ∈ π) :
+  J ∈ π.to_subordinate_tagged_partition r h0 hr :=
+(exists_tagged_partition_superset_is_subordinate h0 hr).some_spec.2.1 _ hJ
+
+
+
+
+end tagged_prepartition
 
 end box_integral

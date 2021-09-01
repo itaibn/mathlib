@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2021 Yury Kudryashov. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yury Kudryashov
+-/
 import analysis.box_integral.partition.subbox_induction
 
 open set function filter metric finset
@@ -8,70 +13,28 @@ namespace box_integral
 
 variables {ι : Type*} [fintype ι] {I : box ι}
 
-namespace box
+open tagged_partition box
 
-def distortion (I : box ι) : ℝ≥0 :=
-finset.univ.sup $ λ i : ι, nndist (I : _).lower I.upper / nndist (I.lower i) (I.upper i)
-
-lemma distortion_eq_of_sub_eq_div {I J : box ι} {r : ℝ}
-  (h : ∀ i, I.upper i - I.lower i = (J.upper i - J.lower i) / r) :
-  distortion I = distortion J :=
-begin
-  simp only [distortion, nndist_pi_def, real.nndist_eq', h, real.nnabs.map_div],
-  congr' 1 with i,
-  have : 0 < r,
-  { by_contra hr,
-    have := div_nonpos_of_nonneg_of_nonpos (sub_nonneg.2 $ J.lower_le_upper i) (not_lt.1 hr),
-    rw ← h at this,
-    exact this.not_lt (sub_pos.2 $ I.lower_lt_upper i) },
-  simp only [nnreal.finset_sup_div, div_div_div_cancel_right _ (real.nnabs.map_ne_zero.2 this.ne')]
-end
-
-lemma nndist_le_distortion_mul (I : box ι) (i : ι) :
-  nndist I.lower I.upper ≤ I.distortion * nndist (I.lower i) (I.upper i) :=
-calc nndist I.lower I.upper =
-  (nndist I.lower I.upper / nndist (I.lower i) (I.upper i)) *  nndist (I.lower i) (I.upper i) :
-  (div_mul_cancel _ $ mt nndist_eq_zero.1 (I.lower_lt_upper i).ne).symm
-... ≤ I.distortion * nndist (I.lower i) (I.upper i) :
-  mul_le_mul_right' (finset.le_sup $ finset.mem_univ i) _
-
-lemma dist_le_distortion_mul (I : box ι) (i : ι) :
-  dist I.lower I.upper ≤ I.distortion * (I.upper i - I.lower i) :=
-have A : I.lower i - I.upper i < 0, from sub_neg.2 (I.lower_lt_upper i),
-by simpa only [← nnreal.coe_le_coe, ← dist_nndist, nnreal.coe_mul, real.dist_eq,
-  abs_of_neg A, neg_sub] using I.nndist_le_distortion_mul i
-
-lemma diam_Icc_le_distortion_mul (I : box ι) (i : ι) :
-  diam I.Icc ≤ I.distortion * (I.upper i - I.lower i) :=
-have (0 : ℝ) ≤ I.distortion * (I.upper i - I.lower i),
-  from mul_nonneg I.distortion.coe_nonneg (sub_nonneg.2 $ I.lower_le_upper _),
-diam_le_of_forall_dist_le this $ λ x hx y hy,
-  (real.dist_le_of_mem_pi_Icc hx hy).trans (dist_le_distortion_mul I i)
-
-end box
-
-open marked_partition box
-
-def Riemann' : filter (marked_partition I) :=
+def Riemann' : filter (tagged_partition I) :=
 ⨅ r > (0 : ℝ), 𝓟 {π | is_subordinate π (λ _, r)}
 
-def Riemann : filter (marked_partition I) :=
+def Riemann : filter (tagged_partition I) :=
 Riemann' ⊓ 𝓟 {π | is_Henstock π}
 
-def McShane : filter (marked_partition I) :=
+def McShane : filter (tagged_partition I) :=
 ⨅ (r : (ι → ℝ) → ℝ) (hr : ∀ x ∈ I.Icc, r x > 0), 𝓟 {π | is_subordinate π r}
 
-def Henstock : filter (marked_partition I) :=
+def Henstock : filter (tagged_partition I) :=
 McShane ⊓ 𝓟 {π | is_Henstock π}
 
-def Henstock'_aux (c : ℝ≥0) : filter (marked_partition I) :=
+def Henstock'_aux (c : ℝ≥0) : filter (tagged_partition I) :=
 Henstock ⊓ 𝓟 {π | ∀ J ∈ π, distortion J ≤ c}
 
-def Henstock' : filter (marked_partition I) :=
+def Henstock' : filter (tagged_partition I) :=
 ⨆ c : ℝ≥0, Henstock'_aux c
 
 lemma Henstock'_def : (@Henstock' _ _ I) =
-  ⨆ c : ℝ≥0, McShane ⊓ 𝓟 {π | ∀ J ∈ π, π.mark J ∈ J.Icc ∧ distortion J ≤ c} :=
+  ⨆ c : ℝ≥0, McShane ⊓ 𝓟 {π | ∀ J ∈ π, π.tag J ∈ J.Icc ∧ distortion J ≤ c} :=
 begin
   refine supr_congr id surjective_id (λ c, _),
   simp only [Henstock'_aux, Henstock, inf_assoc, inf_principal, forall_and_distrib, set_of_and,
@@ -124,6 +87,17 @@ begin
     refine ⟨_, hr, hH, λ J hJ, (hc J hJ).trans _⟩,
     rw [← nnreal.coe_le_coe, nnreal.coe_nat_cast], exact le_nat_ceil _ }
 end
+
+lemma has_basis_Henstock'_antimono :
+  (@Henstock' _ _ I).has_basis
+    (λ r : ℝ≥0 → (ι → ℝ) → ℝ, (∀ c (x ∈ I.Icc), 0 < r c x) ∧ (∀ {c₁ c₂}, c₁ ≤ c₂ → r c₂ ≤ r c₁))
+    (λ r, {π | ∃ c, π.is_subordinate (r c) ∧ π.is_Henstock ∧ ∀ (J ∈ π), (J : _).distortion ≤ c}) :=
+has_basis_Henstock'_nat.to_has_basis
+  (λ r hr, ⟨λ c, r ⌈(c : ℝ)⌉₊, ⟨λ c x hx, hr.1 _ x hx, λ c₁ c₂ hle, hr.2 $ nat_ceil_mono hle⟩,
+    λ π ⟨c, hc⟩, ⟨_, hc.1, hc.2.1, λ J hJ, (hc.2.2 J hJ).trans $
+      by { rw [← nnreal.coe_le_coe, nnreal.coe_nat_cast], exact le_nat_ceil _ }⟩⟩)
+  (λ r hr, ⟨r ∘ coe, ⟨λ n x hx, hr.1 n x hx, λ m n hle, hr.2 (nat.cast_le.2 hle)⟩,
+    λ π ⟨m, hm⟩, ⟨m, hm⟩⟩)
 
 lemma has_basis_Riemann' :
   (@Riemann' _ _ I).has_basis (λ r : ℝ, 0 < r) (λ r, {π | is_subordinate π  (λ _, r)}) :=

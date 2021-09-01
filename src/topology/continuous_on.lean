@@ -458,12 +458,12 @@ end
 lemma continuous_within_at_pi {ι : Type*} {π : ι → Type*} [∀ i, topological_space (π i)]
   {f : α → Π i, π i} {s : set α} {x : α} :
   continuous_within_at f s x ↔ ∀ i, continuous_within_at (λ y, f y i) s x :=
-tendsto_pi
+tendsto_pi_nhds
 
 lemma continuous_on_pi {ι : Type*} {π : ι → Type*} [∀ i, topological_space (π i)]
   {f : α → Π i, π i} {s : set α} :
   continuous_on f s ↔ ∀ i, continuous_on (λ y, f y i) s :=
-⟨λ h i x hx, tendsto_pi.1 (h x hx) i, λ h x hx, tendsto_pi.2 (λ i, h i x hx)⟩
+⟨λ h i x hx, tendsto_pi_nhds.1 (h x hx) i, λ h x hx, tendsto_pi_nhds.2 (λ i, h i x hx)⟩
 
 theorem continuous_on_iff {f : α → β} {s : set α} :
   continuous_on f s ↔ ∀ x ∈ s, ∀ t : set β, is_open t → f x ∈ t → ∃ u, is_open u ∧ x ∈ u ∧

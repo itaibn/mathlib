@@ -4,107 +4,120 @@ import analysis.normed_space.operator_norm
 import topology.uniform_space.compact_separated
 
 open_locale big_operators classical topological_space nnreal filter
-open set function filter continuous_linear_map (lsmul)
+open set finset function filter
 
 noncomputable theory
 
 namespace box_integral
 
-variables {ι E F : Type*} [normed_group E] [normed_space ℝ E] [normed_group F] [normed_space ℝ F]
-  {I : box ι} {π : marked_partition I}
+universes u v w
+
+variables {ι : Type u} {E : Type v} {F : Type w} [normed_group E] [normed_space ℝ E]
+  [normed_group F] [normed_space ℝ F] {I J : box ι} {π : tagged_partition I}
 
 namespace partition
 
-def union {I : box ι} {i : ι} {x : ℝ} {hx : x ∈ Ioo (I.lower i) (I.upper i)}
-  (π₁ : partition (I.split_edge_lower i x hx))
-  (π₂ : partition (I.split_edge_upper i x hx)) :
+def union {I : box ι} {i : ι} {x : ℝ} {hl : I.lower i < x} {hu : x < I.upper i}
+  (π₁ : partition ((I.split_lower i x).get hl)) (π₂ : partition ((I.split_upper i x).get hu)) :
   partition I :=
-{ boxes := π₁.boxes ∪ π₂.boxes,
-  finite_boxes := π₁.finite_boxes.union π₂.finite_boxes,
-  bUnion_boxes_coe := by rw [bUnion_union, bUnion_boxes_coe, bUnion_boxes_coe,
-    box.union_coe_split_edge],
-  pairwise_disjoint :=
-    begin
-      rintro J₁ (hJ₁|hJ₁) J₂ (hJ₂|hJ₂) Hne,
-      exacts [π₁.pairwise_disjoint J₁ hJ₁ J₂ hJ₂ Hne,
-        (I.disjoint_split_edge i x hx).mono (π₁.le_of_mem hJ₁) (π₂.le_of_mem hJ₂),
-        (I.disjoint_split_edge i x hx).symm.mono (π₂.le_of_mem hJ₁) (π₁.le_of_mem hJ₂),
-        π₂.pairwise_disjoint J₁ hJ₁ J₂ hJ₂ Hne]
-    end }
+(split I i x).bUnion $ update (update (λ J, ⊤) _ π₁) _ π₂
+
+variables {i : ι} {x : ℝ} {hl : I.lower i < x} {hu : x < I.upper i}
+  {π₁ : partition ((I.split_lower i x).get hl)} {π₂ : partition ((I.split_upper i x).get hu)}
+
+@[simp] lemma mem_union : J ∈ π₁.union π₂ ↔ J ∈ π₁ ∨ J ∈ π₂ :=
+by simp only [← mem_boxes, union, bUnion_boxes, finset.mem_bUnion, exists_prop,
+  split_boxes_of_mem_Ioo ⟨hl, hu⟩, finset.mem_insert, finset.mem_singleton,
+  or_and_distrib_right, exists_or_distrib, exists_eq_left, update_same,
+  update_noteq (box.split_lower_get_ne_split_upper_get _ _)]
+
+variables (π₁ π₂)
+
+@[simp] lemma union_boxes : (π₁.union π₂).boxes = π₁.boxes ∪ π₂.boxes :=
+finset.ext $ λ y, mem_union.trans finset.mem_union.symm
+
+lemma sum_union_boxes {M : Type*} [add_comm_monoid M] (f : box ι → M) :
+  ∑ J in (π₁.union π₂).boxes, f J = ∑ J in π₁.boxes, f J + ∑ J in π₂.boxes, f J :=
+begin
+  rw [union_boxes, finset.sum_union],
+  exact disjoint_boxes_of_disjoint
+    (box.disjoint_of_mem_split_lower_of_mem_split_upper (part.get_mem _) (part.get_mem _)) _ _
+end
 
 end partition
 
-namespace marked_partition
+namespace tagged_partition
 
-def union {I : box ι} {i : ι} {x : ℝ} {hx : x ∈ Ioo (I.lower i) (I.upper i)}
-  (π₁ : marked_partition (I.split_edge_lower i x hx))
-  (π₂ : marked_partition (I.split_edge_upper i x hx)) :
-  marked_partition I :=
+variables {i : ι} {x : ℝ} {hl : I.lower i < x} {hu : x < I.upper i}
+
+@[simps { attrs := [], fully_applied := false }]
+def union (π₁ : tagged_partition ((I.split_lower i x).get hl))
+  (π₂ : tagged_partition ((I.split_upper i x).get hu)) :
+  tagged_partition I :=
 { to_partition := π₁.to_partition.union π₂.to_partition,
-  mark := λ J, if J ∈ π₁ then π₁.mark J else π₂.mark J,
-  mark_mem_Icc := λ J,
+  tag := λ J, if J ∈ π₁ then π₁.tag J else π₂.tag J,
+  tag_mem_Icc := λ J,
     begin
       split_ifs,
-      exacts [box.le_iff_Icc.1 (I.split_edge_lower_le i x hx) (π₁.mark_mem_Icc _),
-        box.le_iff_Icc.1 (I.split_edge_upper_le i x hx) (π₂.mark_mem_Icc _)]
+      exacts [box.le_iff_Icc.1 I.split_lower_get_le (π₁.tag_mem_Icc _),
+        box.le_iff_Icc.1 I.split_upper_get_le (π₂.tag_mem_Icc _)]
     end }
 
-lemma is_subordinate.union [fintype ι] {I : box ι} {i : ι} {x : ℝ}
-  {hx : x ∈ Ioo (I.lower i) (I.upper i)}
-  {π₁ : marked_partition (I.split_edge_lower i x hx)}
-  {π₂ : marked_partition (I.split_edge_upper i x hx)} {r : (ι → ℝ) → ℝ}
-  (h₁ : is_subordinate π₁ r) (h₂ : is_subordinate π₂ r) :
+variables {π₁ : tagged_partition ((I.split_lower i x).get hl)}
+  {π₂ : tagged_partition ((I.split_upper i x).get hu)}
+
+@[simp] lemma mem_union {J : box ι} : J ∈ π₁.union π₂ ↔ J ∈ π₁ ∨ J ∈ π₂ := partition.mem_union
+
+lemma is_subordinate.union [fintype ι] {r : (ι → ℝ) → ℝ} (h₁ : is_subordinate π₁ r)
+  (h₂ : is_subordinate π₂ r) :
   is_subordinate (π₁.union π₂) r :=
 begin
-  intros J hJ,
+  intros J hJ, rw mem_union at hJ,
   by_cases hJ₁ : J ∈ π₁,
   { simp only [union, if_pos hJ₁, h₁ J hJ₁] },
   { simp only [union, if_neg hJ₁, h₂ J (hJ.resolve_left hJ₁)] }
 end
 
-lemma is_Henstock.union [fintype ι] {I : box ι} {i : ι} {x : ℝ}
-  {hx : x ∈ Ioo (I.lower i) (I.upper i)}
-  {π₁ : marked_partition (I.split_edge_lower i x hx)}
-  {π₂ : marked_partition (I.split_edge_upper i x hx)}
+lemma is_Henstock.union
   (h₁ : is_Henstock π₁) (h₂ : is_Henstock π₂) :
   is_Henstock (π₁.union π₂) :=
 begin
-  intros J hJ,
+  intros J hJ, rw mem_union at hJ,
   by_cases hJ₁ : J ∈ π₁,
   { simp only [union, if_pos hJ₁, h₁ J hJ₁] },
   { simp only [union, if_neg hJ₁, h₂ J (hJ.resolve_left hJ₁)] }
 end
 
-lemma tendsto_union_Henstock [fintype ι] {I : box ι} {i : ι} {x : ℝ}
-  (hx : x ∈ Ioo (I.lower i) (I.upper i)) :
-  tendsto (λ π : marked_partition (I.split_edge_lower i x hx) ×
-    marked_partition (I.split_edge_upper i x hx), π.1.union π.2)
+variables (hl hu)
+
+lemma tendsto_union_Henstock [fintype ι] :
+  tendsto (λ π : tagged_partition ((I.split_lower i x).get hl) ×
+    tagged_partition ((I.split_upper i x).get hu), π.1.union π.2)
     (Henstock ×ᶠ Henstock) Henstock :=
 begin
   refine ((has_basis_Henstock.prod has_basis_Henstock).tendsto_iff has_basis_Henstock).2 _,
   refine λ r hr, ⟨(r, r), ⟨λ x hx, hr x _, λ x hx, hr x _⟩, _⟩,
-  { exact box.le_iff_Icc.1 (I.split_edge_lower_le _ _ _) hx },
-  { exact box.le_iff_Icc.1 (I.split_edge_upper_le _ _ _) hx },
+  { exact box.le_iff_Icc.1 I.split_lower_get_le hx },
+  { exact box.le_iff_Icc.1 I.split_upper_get_le hx },
   { rintro ⟨π₁, π₂⟩ ⟨⟨h₁r, h₁⟩, ⟨h₂r, h₂⟩⟩,
     exact ⟨h₁r.union h₂r, h₁.union h₂⟩ }
 end
 
-lemma tendsto_union_Henstock'_aux [fintype ι] {I : box ι} {i : ι} {x : ℝ}
-  (hx : x ∈ Ioo (I.lower i) (I.upper i)) (c : ℝ≥0) :
-  tendsto (λ π : marked_partition (I.split_edge_lower i x hx) ×
-    marked_partition (I.split_edge_upper i x hx), π.1.union π.2)
+lemma tendsto_union_Henstock'_aux [fintype ι] (c : ℝ≥0) :
+  tendsto (λ π : tagged_partition ((I.split_lower i x).get hl) ×
+    tagged_partition ((I.split_upper i x).get hu), π.1.union π.2)
     (Henstock'_aux c ×ᶠ Henstock'_aux c) (Henstock'_aux c) :=
 begin
   rw [Henstock'_aux, Henstock'_aux, ← prod_inf_prod, prod_principal_principal],
-  refine (tendsto_union_Henstock hx).inf (tendsto_principal_principal.2 _),
+  refine (tendsto_union_Henstock hl hu).inf (tendsto_principal_principal.2 _),
+  simp only [mem_union, mem_set_of_eq],
   rintro ⟨π₁, π₂⟩ ⟨h₁, h₂⟩ J (hJ|hJ),
   exacts [h₁ J hJ, h₂ J hJ]
 end
 
-lemma tendsto_union_Riemann [fintype ι] {I : box ι} {i : ι} {x : ℝ}
-  (hx : x ∈ Ioo (I.lower i) (I.upper i)) :
-  tendsto (λ π : marked_partition (I.split_edge_lower i x hx) ×
-    marked_partition (I.split_edge_upper i x hx), π.1.union π.2)
+lemma tendsto_union_Riemann [fintype ι] :
+  tendsto (λ π : tagged_partition ((I.split_lower i x).get hl) ×
+    tagged_partition ((I.split_upper i x).get hu), π.1.union π.2)
     (Riemann ×ᶠ Riemann) Riemann :=
 begin
   refine ((has_basis_Riemann.prod has_basis_Riemann).tendsto_iff has_basis_Riemann).2 _,
@@ -113,46 +126,43 @@ begin
   exact ⟨h₁r.union h₂r, h₁.union h₂⟩
 end
 
-end marked_partition
+end tagged_partition
 
-open marked_partition
+open tagged_partition
 
-def integral_sum (f : (ι → ℝ) → E) (vol : box ι → (E →L[ℝ] F))
-  (π : marked_partition I) : F :=
-∑ᶠ J ∈ π, vol J (f (π.mark J))
+def integral_sum (f : (ι → ℝ) → E) (vol : box_additive_map ι (E →L[ℝ] F))
+  (π : tagged_partition I) : F :=
+∑ J in π.boxes, vol J (f (π.tag J))
 
-@[simp] lemma integral_sum_add (f g : (ι → ℝ) → E) (vol : box ι → (E →L[ℝ] F))
-  (π : marked_partition I) :
+@[simp] lemma integral_sum_add (f g : (ι → ℝ) → E) (vol : box_additive_map ι (E →L[ℝ] F))
+  (π : tagged_partition I) :
   integral_sum (f + g) vol π = integral_sum f vol π + integral_sum g vol π :=
-begin
-  simp only [integral_sum, pi.add_apply, (vol _).map_add],
-  exact finsum_mem_add_distrib π.finite_boxes
-end
+by simp only [integral_sum, pi.add_apply, (vol _).map_add, finset.sum_add_distrib]
 
-@[simp] lemma integral_sum_neg (f : (ι → ℝ) → E) (vol : box ι → (E →L[ℝ] F))
-  (π : marked_partition I) :
+@[simp] lemma integral_sum_neg (f : (ι → ℝ) → E) (vol : box_additive_map ι (E →L[ℝ] F))
+  (π : tagged_partition I) :
   integral_sum (-f) vol π = -integral_sum f vol π :=
-by simp only [integral_sum, pi.neg_apply, (vol _).map_neg, finsum_neg_distrib]
+by simp only [integral_sum, pi.neg_apply, (vol _).map_neg, finset.sum_neg_distrib]
 
-@[simp] lemma integral_sum_smul (c : ℝ) (f : (ι → ℝ) → E) (vol : box ι → (E →L[ℝ] F))
-  (π : marked_partition I) :
+@[simp] lemma integral_sum_smul (c : ℝ) (f : (ι → ℝ) → E) (vol : box_additive_map ι (E →L[ℝ] F))
+  (π : tagged_partition I) :
   integral_sum (c • f) vol π = c • integral_sum f vol π :=
-by simp only [integral_sum, smul_finsum, pi.smul_apply, continuous_linear_map.map_smul]
+by simp only [integral_sum, finset.smul_sum, pi.smul_apply, continuous_linear_map.map_smul]
 
-def has_integral (I : box ι) (l : filter (marked_partition I)) (vol : box ι → (E →L[ℝ] F))
-  (f : (ι → ℝ) → E) (y : F) : Prop :=
+def has_integral (I : box ι) (l : filter (tagged_partition I))
+  (vol : box_additive_map ι (E →L[ℝ] F)) (f : (ι → ℝ) → E) (y : F) : Prop :=
 tendsto (integral_sum f vol) l (𝓝 y)
 
-def integrable (I : box ι) (l : filter (marked_partition I)) (vol : box ι → (E →L[ℝ] F))
+def integrable (I : box ι) (l : filter (tagged_partition I)) (vol : box_additive_map ι (E →L[ℝ] F))
   (f : (ι → ℝ) → E) : Prop :=
 ∃ y, has_integral I l vol f y
 
-def integral (I : box ι) (l : filter (marked_partition I)) (vol : box ι → (E →L[ℝ] F))
+def integral (I : box ι) (l : filter (tagged_partition I)) (vol : box_additive_map ι (E →L[ℝ] F))
   (f : (ι → ℝ) → E) : F :=
 if h : integrable I l vol f then classical.some h else 0
 
-variables {l : filter (marked_partition I)}
-  {f g : (ι → ℝ) → E} {vol : box ι → (E →L[ℝ] F)} {y y' : F}
+variables {l : filter (tagged_partition I)}
+  {f g : (ι → ℝ) → E} {vol : box_additive_map ι (E →L[ℝ] F)} {y y' : F}
 
 lemma has_integral.tendsto (h : has_integral I l vol f y) :
   tendsto (integral_sum f vol) l (𝓝 y) := h
@@ -162,7 +172,7 @@ lemma integrable_iff_cauchy [complete_space F] [ne_bot l] :
 cauchy_map_iff_exists_tendsto.symm
 
 lemma integrable_iff_ex_basis [complete_space F] [ne_bot l] {ι' : Sort*} {p : ι' → Prop}
-  {s : ι' → set (marked_partition I)} (h : has_basis l p s) :
+  {s : ι' → set (tagged_partition I)} (h : has_basis l p s) :
   integrable I l vol f ↔
     ∀ ε > 0, ∃ j (hi : p j), ∀ π₁ π₂ ∈ s j, ∥integral_sum f vol π₁ - integral_sum f vol π₂∥ ≤ ε :=
 by simp only [integrable_iff_cauchy, cauchy_map_iff, ‹ne_bot l›, true_and,
@@ -306,101 +316,213 @@ begin
     rw [integral, integral, dif_neg hf, dif_neg this, smul_zero] }
 end
 
-lemma integral_sum_bUnion_unmarked [fintype ι] (π : marked_partition I) (πi : Π J ∈ π, partition J)
-  (hvol : box_additive_on vol I):
-  integral_sum f vol (π.bUnion_unmarked πi) = integral_sum f vol π :=
+lemma integral_sum_bUnion_partition [fintype ι] (π : tagged_partition I) (πi : Π J, partition J) :
+  integral_sum f vol (π.bUnion_partition πi) = integral_sum f vol π :=
 begin
-  refine (π.to_partition.finsum_mem_bUnion πi _).trans _,
-  refine finsum_congr (λ J, finsum_congr $ λ hJ, _),
-  have : ∀ x, box_additive_on (λ J', vol J' x) J,
-    from λ x, (hvol.add_monoid_hom_comp (continuous_linear_map.apply ℝ F x)
-      .to_linear_map.to_add_monoid_hom).restrict (π.to_partition.le_of_mem hJ),
-  calc ∑ᶠ J' ∈ πi J hJ, vol J' (f (π.mark (π.to_partition.bUnion_index πi J'))) =
-    ∑ᶠ J' ∈ πi J hJ, vol J' (f (π.mark J)) :
-      finsum_mem_congr rfl (λ J' (hJ' : J' ∈ πi J hJ), by rw partition.bUnion_index_of_mem _ _ hJ')
-  ... = vol J (f (π.mark J)) : (this _).finsum_mem_partition _
+  refine (π.to_partition.sum_bUnion_boxes πi _).trans _,
+  refine finset.sum_congr rfl (λ J hJ, _),
+  calc ∑ J' in (πi J).boxes, vol J' (f (π.tag (π.to_partition.bUnion_index πi J')))
+      = ∑ J' in (πi J).boxes, vol J' (f (π.tag J)) :
+    finset.sum_congr rfl (λ J' hJ', by rw partition.bUnion_index_of_mem _ hJ hJ')
+  ... = vol J (f (π.tag J)) :
+    (vol.map ⟨λ g : E →L[ℝ] F, g (f (π.tag J)), λ g₁ g₂, rfl⟩).sum_partition_boxes (πi J)
 end
 
-lemma integral_sum_inf_unmarked [fintype ι] (π : marked_partition I) (π' : partition I)
-  (hvol : box_additive_on vol I):
-  integral_sum f vol (π.inf_unmarked π') = integral_sum f vol π :=
-integral_sum_bUnion_unmarked π _ hvol
+lemma integral_sum_inf_partition [fintype ι] (π : tagged_partition I) (π' : partition I) :
+  integral_sum f vol (π.inf_partition π') = integral_sum f vol π :=
+integral_sum_bUnion_partition π _
 
-@[simp] lemma integral_sum_union {i : ι} {x : ℝ} {hx : x ∈ Ioo (I.lower i) (I.upper i)}
-  (π₁ : marked_partition (I.split_edge_lower i x hx))
-  (π₂ : marked_partition (I.split_edge_upper i x hx)) :
+lemma integral_sum_bUnion_tagged [fintype ι] (π : partition I) (πi : Π J, tagged_partition J) :
+  integral_sum f vol (π.bUnion_tagged πi) = ∑ J in π.boxes, integral_sum f vol (πi J) :=
+begin
+  refine (π.sum_bUnion_boxes _ _).trans (finset.sum_congr rfl $ λ J hJ,
+    finset.sum_congr rfl $ λ J' hJ', _),
+  simp only [partition.bUnion_tagged],
+  rw π.bUnion_index_of_mem hJ hJ'
+end
+
+lemma integral_sum_bUnion_tagged_update [fintype ι] {π : partition I} (πi : Π J, tagged_partition J)
+  {J : box ι} (hJ : J ∈ π) (πJ : tagged_partition J) :
+  integral_sum f vol (π.bUnion_tagged (update πi J πJ)) =
+    integral_sum f vol (π.bUnion_tagged πi) - integral_sum f vol (πi J) + integral_sum f vol πJ :=
+begin
+  rw [integral_sum_bUnion_tagged, integral_sum_bUnion_tagged,
+    sum_eq_sum_diff_singleton_add hJ, sum_eq_add_sum_diff_singleton hJ,
+    add_sub_cancel', update_same],
+  refine congr_arg2 (+) (sum_congr rfl $ λ J' hJ', _) rfl,
+  rw [mem_sdiff, finset.mem_singleton] at hJ',
+  rw update_noteq hJ'.2
+end
+
+@[simp] lemma integral_sum_union {i : ι} {x : ℝ} {hl : I.lower i < x} {hu : x < I.upper i}
+  (π₁ : tagged_partition ((I.split_lower i x).get hl))
+  (π₂ : tagged_partition ((I.split_upper i x).get hu)) :
   integral_sum f vol (π₁.union π₂) = integral_sum f vol π₁ + integral_sum f vol π₂ :=
 begin
-  have : disjoint π₁.boxes π₂.boxes,
-  { rintro J ⟨h₁, h₂⟩,
-    refine (π₁.to_partition.le_of_mem h₁ J.upper_mem i).2.not_lt _,
-    simpa using (π₂.to_partition.le_of_mem h₂ J.upper_mem i).1 },
-  simp only [integral_sum],
-  refine (finsum_mem_union this π₁.finite_boxes π₂.finite_boxes).trans _,
-  refine congr_arg2 (+) (finsum_mem_congr rfl $ λ J hJ, _) (finsum_mem_congr rfl $ λ J hJ, _);
-    congr' 2,
-  exacts [if_pos hJ, if_neg (λ h, this ⟨h, hJ⟩)]
+  refine (partition.sum_union_boxes _ _ _).trans _,
+  refine congr_arg2 (+) (finset.sum_congr rfl $ λ J hJ, _) (finset.sum_congr rfl $ λ J hJ, _),
+  { simp only [union_tag, if_pos (show J ∈ π₁, from hJ)] },
+  { suffices : J ∉ π₁, by simp only [union_tag, if_neg this],
+    exact finset.disjoint_right.1 (partition.disjoint_boxes_of_disjoint
+      (box.disjoint_split_lower_get_split_upper_get hl hu) _ _) hJ }
 end
 
-lemma integral_sum_sub_partitions [fintype ι] (π₁ π₂ : marked_partition I)
-  (hvol : box_additive_on vol I) :
+lemma integral_sum_sub_partitions [fintype ι] (π₁ π₂ : tagged_partition I) :
   integral_sum f vol π₁ - integral_sum f vol π₂ =
-    ∑ᶠ J ∈ π₁.to_partition ⊓ π₂.to_partition,
-      (vol J (f $ (π₁.inf_unmarked π₂.to_partition).mark J) -
-        vol J (f $ (π₂.inf_unmarked π₁.to_partition).mark J)) :=
+    ∑ J in (π₁.to_partition ⊓ π₂.to_partition).boxes,
+      (vol J (f $ (π₁.inf_partition π₂.to_partition).tag J) -
+        vol J (f $ (π₂.inf_partition π₁.to_partition).tag J)) :=
 begin
-  erw [← integral_sum_inf_unmarked π₁ π₂.to_partition hvol,
-    ← integral_sum_inf_unmarked π₂ π₁.to_partition hvol, integral_sum, integral_sum,
-    finsum_mem_sub_distrib (partition.finite_boxes _)],
-  congr' 1,
-  rw inf_comm, refl
+  rw [← integral_sum_inf_partition π₁ π₂.to_partition,
+    ← integral_sum_inf_partition π₂ π₁.to_partition, integral_sum, integral_sum,
+    finset.sum_sub_distrib],
+  simp only [inf_partition_to_partition, inf_comm]
 end
 
-lemma has_integral_const [fintype ι] (hvol : box_additive_on vol I) (c : E) :
-  has_integral I l vol (λ _, c) (vol I c) :=
-begin
-  refine tendsto_const_nhds.congr (λ π, _),
-  rw [integral_sum, eq_comm],
-  refine box_additive_on.finsum_mem_partition _ π.to_partition,
-  exact hvol.add_monoid_hom_comp (continuous_linear_map.apply ℝ F c).to_linear_map.to_add_monoid_hom
-end
+lemma has_integral_const [fintype ι] (c : E) : has_integral I l vol (λ _, c) (vol I c) :=
+tendsto_const_nhds.congr $ λ π,
+  ((vol.map ⟨λ g : E →L[ℝ] F, g c, λ _ _, rfl⟩).sum_partition_boxes _).symm
 
-lemma integral_const [fintype ι] [ne_bot l] (hvol : box_additive_on vol I) (c : E) :
+lemma integral_const [fintype ι] [ne_bot l] (c : E) :
   integral I l vol (λ _, c) = vol I c :=
-(has_integral_const hvol c).integral_eq
+(has_integral_const c).integral_eq
 
-lemma integrable_const [fintype ι] (hvol : box_additive_on vol I) (c : E) :
+lemma integrable_const [fintype ι] (c : E) :
   integrable I l vol (λ _, c) :=
-⟨_, has_integral_const hvol c⟩
+⟨_, has_integral_const c⟩
 
-def volume [fintype ι] (I : box ι) : E →L[ℝ] E := lsmul ℝ ℝ I.volume
+def volume [fintype ι] : box_additive_map ι (E →L[ℝ] E) :=
+box.volume.map { .. continuous_linear_map.lsmul ℝ ℝ}
 
 @[simp] lemma volume_apply [fintype ι] (I : box ι) (x : E) : volume I x = I.volume • x := rfl
 
-lemma box_additive_on_volume [fintype ι] (I : box ι) :
-  box_additive_on (volume : box ι → E →L[ℝ] E) I :=
-(box_additive_on_box_volume I).add_monoid_hom_comp
-      (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).to_linear_map.to_add_monoid_hom
-
 lemma norm_integral_le_of_le_const [fintype ι] [ne_bot l] {c : ℝ} (hc : ∀ x ∈ I.Icc, ∥f x∥ ≤ c) :
-  ∥integral I l volume f∥ ≤ I.volume * c :=
+  ∥(integral I l (@volume ι E _ _ _) f : E)∥ ≤ I.volume * c :=
 begin
   have h0 : 0 ≤ c, from (norm_nonneg _).trans (hc I.upper I.upper_mem_Icc),
-  by_cases hf : integrable I l volume f,
+  by_cases hf : @integrable ι E E _ _ _ _ I l volume f,
   { refine le_of_tendsto' hf.has_integral.norm (λ π, _),
-    erw [integral_sum, π.to_partition.finsum_eq_sum],
-    rw [← (box_additive_on_box_volume I).finsum_mem_partition π.to_partition,
-      partition.finsum_eq_sum, finset.sum_mul],
-    refine norm_sum_le_of_le _ (λ J hJ, _), rw finite.mem_to_finset at hJ,
+    rw [integral_sum],
+    rw [← box.volume.sum_partition_boxes π.to_partition, finset.sum_mul],
+    refine norm_sum_le_of_le _ (λ J hJ, _),
     rw [volume_apply, norm_smul, real.norm_eq_abs, abs_of_pos J.volume_pos,
       mul_le_mul_left J.volume_pos],
-    exact hc _ (π.mark_mem_Icc _) },
+    exact hc _ (π.tag_mem_Icc _) },
   { rw [integral, dif_neg hf, norm_zero],
     exact mul_nonneg I.volume_pos.le h0 }
 end
 
+lemma integrable.to_subbox_Riemann [fintype ι] [complete_space E]
+  (h : @integrable ι E E _ _ _ _ I Riemann volume f) (hJ : J ≤ I) :
+  @integrable ι E E _ _ _ _ J Riemann volume f :=
+begin
+  refine (integrable_iff_ex_basis has_basis_Riemann).2 (λ ε ε0, _),
+  rcases partition.exists_partition_mem hJ with ⟨π, hπ⟩,
+  rcases (integrable_iff_ex_basis has_basis_Riemann).1 h ε ε0 with ⟨δ, δ0, Hδ⟩,
+  use [δ, δ0], rintro π₁ π₂ ⟨h₁δ, h₁H⟩ ⟨h₂δ, h₂H⟩,
+  have := λ J : box ι, exists_is_Henstock_is_subordinate_homothetic J (λ _ _, δ0),
+  choose πi hπiH hπiδ H, clear H,
+  convert Hδ (π.bUnion_tagged (update πi J π₁)) (π.bUnion_tagged (update πi J π₂)) _ _ using 2,
+  { simp [integral_sum_bUnion_tagged_update _ hπ] },
+  { exact ⟨(is_subordinate_bUnion_update hπ _).2 ⟨h₁δ, λ _ _ _, hπiδ _⟩,
+      (is_Henstock_bUnion_update hπ _).2 ⟨h₁H, λ _ _ _, hπiH _⟩⟩ },
+  { exact ⟨(is_subordinate_bUnion_update hπ _).2 ⟨h₂δ, λ _ _ _, hπiδ _⟩,
+      (is_Henstock_bUnion_update hπ _).2 ⟨h₂H, λ _ _ _, hπiH _⟩⟩ }
+end
+
+lemma integrable.to_subbox_Riemann' [fintype ι] [complete_space E]
+  (h : @integrable ι E E _ _ _ _ I Riemann' volume f) (hJ : J ≤ I) :
+  @integrable ι E E _ _ _ _ J Riemann' volume f :=
+begin
+  refine (integrable_iff_ex_basis has_basis_Riemann').2 (λ ε ε0, _),
+  rcases partition.exists_partition_mem hJ with ⟨π, hπ⟩,
+  rcases (integrable_iff_ex_basis has_basis_Riemann').1 h ε ε0 with ⟨δ, δ0, Hδ⟩,
+  use [δ, δ0], rintro π₁ π₂ h₁δ h₂δ,
+  have := λ J : box ι, exists_is_Henstock_is_subordinate_homothetic J (λ _ _, δ0),
+  choose πi hπiH hπiδ H, clear H,
+  convert Hδ (π.bUnion_tagged (update πi J π₁)) (π.bUnion_tagged (update πi J π₂)) _ _ using 2,
+  { simp [integral_sum_bUnion_tagged_update _ hπ] },
+  { exact (is_subordinate_bUnion_update hπ _).2 ⟨h₁δ, λ _ _ _, hπiδ _⟩ },
+  { exact (is_subordinate_bUnion_update hπ _).2 ⟨h₂δ, λ _ _ _, hπiδ _⟩ }
+end
+
+lemma integrable.to_subbox_McShane [fintype ι] [complete_space E]
+  (h : @integrable ι E E _ _ _ _ I McShane volume f) (hJ : J ≤ I) :
+  @integrable ι E E _ _ _ _ J McShane volume f :=
+begin
+  refine (integrable_iff_ex_basis has_basis_McShane).2 (λ ε ε0, _),
+  rcases partition.exists_partition_mem hJ with ⟨π, hπ⟩,
+  rcases (integrable_iff_ex_basis has_basis_McShane).1 h ε ε0 with ⟨δ, δ0, Hδ⟩,
+  refine ⟨δ, λ x hx, δ0 x (box.le_iff_Icc.1 hJ hx), _⟩, rintro π₁ π₂ h₁δ h₂δ,
+  have := λ (J : box ι) (hJ : J ≤ I),
+    exists_is_Henstock_is_subordinate_homothetic J (λ x hx, δ0 x (box.le_iff_Icc.1 hJ hx)),
+  choose! πi hπiH hπiδ H, clear H,
+  convert Hδ (π.bUnion_tagged (update πi J π₁)) (π.bUnion_tagged (update πi J π₂)) _ _ using 2,
+  { simp [integral_sum_bUnion_tagged_update _ hπ] },
+  { exact (is_subordinate_bUnion_update hπ _).2 ⟨h₁δ, λ J' hJ' _, hπiδ _ (π.le_of_mem hJ')⟩ },
+  { exact (is_subordinate_bUnion_update hπ _).2 ⟨h₂δ, λ J' hJ' _, hπiδ _ (π.le_of_mem hJ')⟩ }
+end
+
+lemma integrable.to_subbox_Henstock [fintype ι] [complete_space E]
+  (h : @integrable ι E E _ _ _ _ I Henstock volume f) (hJ : J ≤ I) :
+  @integrable ι E E _ _ _ _ J Henstock volume f :=
+begin
+  refine (integrable_iff_ex_basis has_basis_Henstock).2 (λ ε ε0, _),
+  rcases partition.exists_partition_mem hJ with ⟨π, hπ⟩,
+  rcases (integrable_iff_ex_basis has_basis_Henstock).1 h ε ε0 with ⟨δ, δ0, Hδ⟩,
+  refine ⟨δ, λ x hx, δ0 x (box.le_iff_Icc.1 hJ hx), _⟩, rintro π₁ π₂ ⟨h₁δ, h₁H⟩ ⟨h₂δ, h₂H⟩,
+  have := λ (J : box ι) (hJ : J ≤ I),
+    exists_is_Henstock_is_subordinate_homothetic J (λ x hx, δ0 x (box.le_iff_Icc.1 hJ hx)),
+  choose! πi hπiH hπiδ H, clear H,
+  convert Hδ (π.bUnion_tagged (update πi J π₁)) (π.bUnion_tagged (update πi J π₂)) _ _ using 2,
+  { simp [integral_sum_bUnion_tagged_update _ hπ] },
+  { exact ⟨(is_subordinate_bUnion_update hπ _).2 ⟨h₁δ, λ J' hJ' _, hπiδ _ (π.le_of_mem hJ')⟩,
+      (is_Henstock_bUnion_update hπ _).2 ⟨h₁H, λ J' hJ' _, hπiH _ (π.le_of_mem hJ')⟩⟩ },
+  { exact ⟨(is_subordinate_bUnion_update hπ _).2 ⟨h₂δ, λ J' hJ' _, hπiδ _ (π.le_of_mem hJ')⟩,
+      (is_Henstock_bUnion_update hπ _).2 ⟨h₂H, λ J' hJ' _, hπiH _ (π.le_of_mem hJ')⟩⟩ }
+end
+
+lemma integrable.to_subbox_Henstock' [fintype ι] [complete_space E]
+  (h : @integrable ι E E _ _ _ _ I Henstock' volume f) (hJ : J ≤ I) :
+  @integrable ι E E _ _ _ _ J Henstock' volume f :=
+begin
+  refine (integrable_iff_ex_basis has_basis_Henstock').2 (λ ε ε0, _),
+  rcases partition.exists_partition_mem hJ with ⟨π, hπ⟩,
+  set C : ℝ≥0 := π.boxes.sup' π.nonempty_boxes box.distortion,
+  rcases (integrable_iff_ex_basis has_basis_Henstock'_antimono).1 h ε ε0 with ⟨δ, ⟨δ0, δ_mono⟩, Hδ⟩,
+  refine ⟨λ c x, δ (max c C) x, λ c x hx, δ0 _ x (box.le_iff_Icc.1 hJ hx), _⟩,
+  rintro π₁ π₂ ⟨c₁, h₁δ, h₁H, hc₁⟩ ⟨c₂, h₂δ, h₂H, hc₂⟩,
+  have := λ (J : box ι) (hJ : J ≤ I), exists_is_Henstock_is_subordinate_homothetic J
+    (λ x hx, δ0 (max (max c₁ c₂) C) x (box.le_iff_Icc.1 hJ hx)),
+  choose! πi hπiH hπiδ N hπiN,
+  have hC : ∀ (J ∈ π) (J' ∈ πi J), box.distortion J' ≤ C,
+  { intros J hJ J' hJ',
+    rw box.distortion_eq_of_sub_eq_div (hπiN J (π.le_of_mem hJ) J' hJ'),
+    exact finset.le_sup' box.distortion hJ },
+  convert Hδ (π.bUnion_tagged (update πi J π₁)) (π.bUnion_tagged (update πi J π₂)) _ _ using 2,
+  { simp [integral_sum_bUnion_tagged_update _ hπ] },
+  { refine ⟨max c₁ C, _, _, _⟩,
+    { rw is_subordinate_bUnion_update hπ,
+      exact ⟨h₁δ, λ J' hJ' _, (hπiδ _ (π.le_of_mem hJ')).mono
+        (λ x hx, δ_mono (max_le_max (le_max_left c₁ c₂) le_rfl) _)⟩ },
+    { rw is_Henstock_bUnion_update hπ,
+      exact ⟨h₁H, λ J' hJ' _, hπiH _ (π.le_of_mem hJ')⟩ },
+    { rw π.forall_bUnion_tagged_update (λ _ J', J'.distortion ≤ max c₁ C) _ hπ,
+      exact ⟨λ J' hJ', (hc₁ J' hJ').trans (le_max_left _ _),
+        λ J' hJ' _ J'' hJ'', (hC J' hJ' J'' hJ'').trans (le_max_right _ _)⟩ } },
+  { refine ⟨max c₂ C, _, _, _⟩,
+    { rw is_subordinate_bUnion_update hπ,
+      exact ⟨h₂δ, λ J' hJ' _, (hπiδ _ (π.le_of_mem hJ')).mono
+        (λ x hx, δ_mono (max_le_max (le_max_right c₁ c₂) le_rfl) _)⟩ },
+    { rw is_Henstock_bUnion_update hπ,
+      exact ⟨h₂H, λ J' hJ' _, hπiH _ (π.le_of_mem hJ')⟩ },
+    { rw π.forall_bUnion_tagged_update (λ _ J', J'.distortion ≤ max c₂ C) _ hπ,
+      exact ⟨λ J' hJ', (hc₂ J' hJ').trans (le_max_left _ _),
+        λ J' hJ' _ J'' hJ'', (hC J' hJ' J'' hJ'').trans (le_max_right _ _)⟩ } },
+end
+
 lemma box_additive_on_integral_Riemann [fintype ι]
-  (H : ∀ J ≤ I, integrable J Riemann volume f) :
+  (H : ∀ J ≤ I, @integrable ι E E _ _ _ _ J Riemann volume f) :
   box_additive_on (λ J, integral J Riemann volume f) I :=
 begin
   intros J hJ i x hx, simp only,
@@ -455,13 +577,13 @@ begin
   simp_rw [integral_sum_sub_partitions _ _ (box_additive_on_volume I),
     ← continuous_linear_map.map_sub, partition.finsum_eq_sum, volume_apply],
   have : ∀ J ∈ (π₁.to_partition ⊓ π₂.to_partition).finite_boxes.to_finset,
-    ∥(J : _).volume • (f ((π₁.inf_unmarked π₂.to_partition).mark J) -
-      f ((π₂.inf_unmarked π₁.to_partition).mark J))∥ ≤ J.volume * (ε / I.volume),
+    ∥(J : _).volume • (f ((π₁.inf_untagged π₂.to_partition).tag J) -
+      f ((π₂.inf_untagged π₁.to_partition).tag J))∥ ≤ J.volume * (ε / I.volume),
   { intros J hJ,
     rw [finite.mem_to_finset] at hJ,
     rw [norm_smul, real.norm_eq_abs, abs_of_pos J.volume_pos, mul_le_mul_left J.volume_pos,
       ← dist_eq_norm],
-    refine Hδ _ _ (marked_partition.mark_mem_Icc _ _) (marked_partition.mark_mem_Icc _ _) _,
+    refine Hδ _ _ (tagged_partition.tag_mem_Icc _ _) (tagged_partition.tag_mem_Icc _ _) _,
     rw [← add_halves δ],
     refine (dist_triangle_left _ _ J.upper).trans (add_le_add (h₁ _ _ _) (h₂ _ _ _)),
     { apply partition.bUnion_index_mem },
@@ -488,7 +610,7 @@ lemma has_integral_McShane_inf_principal_of_forall_is_o [fintype ι] (B : box ι
   (HB : box_additive_on B I) (g : box ι → F) (hg : box_additive_on g I) (p : (ι → ℝ) → box ι → Prop)
   (H : ∀ (x ∈ I.Icc) (ε > 0), ∃ δ > 0, ∀ J ≤ I, J.Icc ⊆ metric.closed_ball x δ → p x J →
     dist (vol J (f x)) (g J) ≤ ε * B J) :
-  has_integral I (McShane ⊓ 𝓟 {π | ∀ J ∈ π, p (π.mark J) J}) vol f (g I) :=
+  has_integral I (McShane ⊓ 𝓟 {π | ∀ J ∈ π, p (π.tag J) J}) vol f (g I) :=
 begin
   refine ((has_basis_McShane.inf_principal _).tendsto_iff metric.nhds_basis_closed_ball).2 _,
   intros ε ε0,
@@ -498,10 +620,10 @@ begin
   rintro π ⟨hπδ, hπp⟩, rw mem_set_of_eq at hπδ hπp,
   erw [metric.mem_closed_ball, ← hg.finsum_mem_partition π.to_partition, dist_eq_norm, integral_sum,
    π.to_partition.finsum_eq_sum, π.to_partition.finsum_eq_sum, ← finset.sum_sub_distrib],
-  have : ∀ J ∈ π.finite_boxes.to_finset, ∥vol J (f $ π.mark J) - g J∥ ≤ ε / max (B I) 1 * B J,
+  have : ∀ J ∈ π.finite_boxes.to_finset, ∥vol J (f $ π.tag J) - g J∥ ≤ ε / max (B I) 1 * B J,
   { intros J hJ,
     rw finite.mem_to_finset at hJ,
-    exact Hδε _ (π.mark_mem_Icc _) _ (div_pos ε0 Hpos) _ (π.to_partition.le_of_mem hJ) (hπδ J hJ)
+    exact Hδε _ (π.tag_mem_Icc _) _ (div_pos ε0 Hpos) _ (π.to_partition.le_of_mem hJ) (hπδ J hJ)
       (hπp _ hJ) },
   refine (norm_sum_le_of_le _ this).trans _,
   rw [← finset.mul_sum, ← π.to_partition.finsum_eq_sum, HB.finsum_mem_partition],
