@@ -1325,6 +1325,14 @@ begin
   refl
 end
 
+lemma to_real_sub_of_le {a b : ℝ≥0∞} (h : b ≤ a) (ha : a ≠ ∞):
+  (a - b).to_real = a.to_real - b.to_real :=
+begin
+  lift b to ℝ≥0 using ne_top_of_le_ne_top ha h,
+  lift a to ℝ≥0 using ha,
+  simp only [← ennreal.coe_sub, ennreal.coe_to_real, nnreal.coe_sub (ennreal.coe_le_coe.mp h)],
+end
+
 lemma to_real_add_le : (a+b).to_real ≤ a.to_real + b.to_real :=
 if ha : a = ∞ then by simp only [ha, top_add, top_to_real, zero_add, to_real_nonneg]
 else if hb : b = ∞ then by simp only [hb, add_top, top_to_real, add_zero, to_real_nonneg]
@@ -1399,6 +1407,9 @@ by simp [ennreal.of_real]
 @[simp] lemma of_real_eq_zero {p : ℝ} : ennreal.of_real p = 0 ↔ p ≤ 0 :=
 by simp [ennreal.of_real]
 
+@[simp] lemma zero_eq_of_real {p : ℝ} : 0 = ennreal.of_real p ↔ p ≤ 0 :=
+eq_comm.trans of_real_eq_zero
+
 lemma of_real_le_iff_le_to_real {a : ℝ} {b : ℝ≥0∞} (hb : b ≠ ∞) :
   ennreal.of_real a ≤ b ↔ a ≤ ennreal.to_real b :=
 begin
@@ -1435,6 +1446,10 @@ end
 lemma of_real_mul {p q : ℝ} (hp : 0 ≤ p) :
   ennreal.of_real (p * q) = (ennreal.of_real p) * (ennreal.of_real q) :=
 by { simp only [ennreal.of_real, coe_mul.symm, coe_eq_coe], exact real.to_nnreal_mul hp }
+
+lemma of_real_pow {p : ℝ} (hp : 0 ≤ p) (n : ℕ) :
+  ennreal.of_real (p ^ n) = ennreal.of_real p ^ n :=
+by rw [of_real_eq_coe_nnreal hp, ← coe_pow, ← of_real_coe_nnreal, nnreal.coe_pow, nnreal.coe_mk]
 
 lemma of_real_inv_of_pos {x : ℝ} (hx : 0 < x) :
   (ennreal.of_real x)⁻¹ = ennreal.of_real x⁻¹ :=
