@@ -5,135 +5,147 @@ Authors: Yury Kudryashov
 -/
 import analysis.box_integral.partition.subbox_induction
 
-open set function filter metric finset
+open set function filter metric finset bool
 open_locale classical topological_space filter nnreal
 noncomputable theory
 
 namespace box_integral
 
-variables {ι : Type*} [fintype ι] {I : box ι}
+@[ext] structure integration_filter : Type :=
+(bRiemann bHenstock bDistortion : bool)
 
-open tagged_partition box
+namespace integration_filter
 
-def Riemann' : filter (tagged_partition I) :=
-⨅ r > (0 : ℝ), 𝓟 {π | is_subordinate π (λ _, r)}
+instance : bounded_lattice integration_filter :=
+{ le := λ l₁ l₂, (l₁.1 ≤ l₂.1) ∧ (l₂.2 ≤ l₁.2) ∧ (l₂.3 ≤ l₁.3),
+  le_refl := λ l, ⟨le_rfl, le_rfl, le_rfl⟩,
+  le_trans := λ l₁ l₂ l₃ h₁₂ h₂₃, ⟨h₁₂.1.trans h₂₃.1, h₂₃.2.1.trans h₁₂.2.1, h₂₃.2.2.trans h₁₂.2.2⟩,
+  le_antisymm := λ l₁ l₂ h₁₂ h₂₁, ext _ _ (le_antisymm h₁₂.1 h₂₁.1) (le_antisymm h₂₁.2.1 h₁₂.2.1)
+    (le_antisymm h₂₁.2.2 h₁₂.2.2),
+  inf := λ l₁ l₂, ⟨l₁.1 && l₂.1, l₁.2 || l₂.2, l₁.3 || l₂.3⟩,
+  inf_le_left := λ l₁ l₂, ⟨band_le_left _ _, left_le_bor _ _, left_le_bor _ _⟩,
+  inf_le_right := λ l₁ l₂, ⟨band_le_right _ _, right_le_bor _ _, right_le_bor _ _⟩,
+  le_inf := λ l₁ l₂ l₃ h₁ h₂, ⟨le_band h₁.1 h₂.1, bor_le h₁.2.1 h₂.2.1, bor_le h₁.2.2 h₂.2.2⟩,
+  sup := λ l₁ l₂, ⟨l₁.1 || l₂.1, l₁.2 && l₂.2, l₁.3 && l₂.3⟩,
+  le_sup_left := λ l₁ l₂, ⟨left_le_bor _ _, band_le_left _ _, band_le_left _ _⟩,
+  le_sup_right := λ l₁ l₂, ⟨right_le_bor _ _, band_le_right _ _, band_le_right _ _⟩,
+  sup_le := λ l₁ l₂ l₃ h₁ h₂, ⟨bor_le h₁.1 h₂.1, le_band h₁.2.1 h₂.2.1, le_band h₁.2.2 h₂.2.2⟩,
+  bot := ⟨ff, tt, tt⟩,
+  bot_le := λ l, ⟨ff_le, le_tt, le_tt⟩,
+  top := ⟨tt, ff, ff⟩,
+  le_top := λ l, ⟨le_tt, ff_le, ff_le⟩ }
 
-def Riemann : filter (tagged_partition I) :=
-Riemann' ⊓ 𝓟 {π | is_Henstock π}
+variables {ι : Type*} [fintype ι]
 
-def McShane : filter (tagged_partition I) :=
-⨅ (r : (ι → ℝ) → ℝ) (hr : ∀ x ∈ I.Icc, r x > 0), 𝓟 {π | is_subordinate π r}
+def to_set (l : integration_filter) (I : box ι) (c : ℝ≥0) (r : (ι → ℝ) → ℝ) :
+  set (tagged_prepartition I) :=
+{π | π.is_subordinate r ∧ (l.bHenstock → π.is_Henstock) ∧ (l.bDistortion → π.distortion ≤ c)}
 
-def Henstock : filter (tagged_partition I) :=
-McShane ⊓ 𝓟 {π | is_Henstock π}
+def prepartition_filter_aux (l : integration_filter) (I : box ι) (c : ℝ≥0) :
+  filter (tagged_prepartition I) :=
+⨅ (r : (ι → ℝ) → ℝ) (h0 : ∀ x ∈ I.Icc, (0 < r x) ∧ (l.bRiemann → r x = r I.upper)),
+  𝓟 (l.to_set I c r)
 
-def Henstock'_aux (c : ℝ≥0) : filter (tagged_partition I) :=
-Henstock ⊓ 𝓟 {π | ∀ J ∈ π, distortion J ≤ c}
+def prepartition_filter (l : integration_filter) (I : box ι) :
+  filter (tagged_prepartition I) :=
+⨆ c : ℝ≥0, l.prepartition_filter_aux I c
 
-def Henstock' : filter (tagged_partition I) :=
-⨆ c : ℝ≥0, Henstock'_aux c
+def partition_filter_aux (l : integration_filter) (I : box ι) (π₀ : prepartition I) (c : ℝ≥0) :=
+l.prepartition_filter_aux I c ⊓ 𝓟 {π | π.to_prepartition ≤ π₀ ∧ π.Union = π₀.Union}
 
-lemma Henstock'_def : (@Henstock' _ _ I) =
-  ⨆ c : ℝ≥0, McShane ⊓ 𝓟 {π | ∀ J ∈ π, π.tag J ∈ J.Icc ∧ distortion J ≤ c} :=
+def partition_filter (l : integration_filter) (I : box ι) (π₀ : prepartition I) :=
+l.prepartition_filter I ⊓ 𝓟 {π | π.to_prepartition ≤ π₀ ∧ π.Union = π₀.Union}
+
+lemma supr_partition_filter_aux (l : integration_filter) (I : box ι) (π₀ : prepartition I) :
+  (⨆ c, l.partition_filter_aux I π₀  c) = l.partition_filter I π₀ :=
+supr_inf_principal _ _
+
+@[mono] lemma to_set_mono (I : box ι) {l₁ l₂ : integration_filter} (h : l₁ ≤ l₂)
+  {c₁ c₂ : ℝ≥0} (hc : c₁ ≤ c₂) {r₁ r₂ : (ι → ℝ) → ℝ} (hr : ∀ x ∈ I.Icc, r₁ x ≤ r₂ x) :
+  l₁.to_set I c₁ r₁ ⊆ l₂.to_set I c₂ r₂ :=
+λ π ⟨hr', hH, hd⟩, ⟨hr'.mono hr, λ h₂, hH (le_iff_imp.1 h.2.1 h₂),
+      λ h₃, (hd (le_iff_imp.1 h.2.2 h₃)).trans hc⟩
+
+@[mono] lemma prepartition_filter_aux_mono (I : box ι) {l₁ l₂ : integration_filter} (h : l₁ ≤ l₂)
+  {c₁ c₂ : ℝ≥0} (hc : c₁ ≤ c₂) :
+  l₁.prepartition_filter_aux I c₁ ≤ l₂.prepartition_filter_aux I c₂ :=
+infi_le_infi $ λ r, infi_le_infi2 $ λ hr,
+  ⟨λ x hx, ⟨(hr x hx).1, λ h₁, (hr x hx).2 (le_iff_imp.1 h.1 h₁)⟩,
+    principal_mono.2 $ to_set_mono I h hc (λ _ _, le_rfl)⟩
+
+@[mono] lemma prepartition_filter_mono (I : box ι) {l₁ l₂ : integration_filter} (h : l₁ ≤ l₂) :
+  l₁.prepartition_filter I ≤ l₂.prepartition_filter I :=
+supr_le_supr $ λ c, prepartition_filter_aux_mono I h le_rfl
+
+@[mono] lemma partition_filter_aux_mono (I : box ι) {l₁ l₂ : integration_filter} (h : l₁ ≤ l₂)
+  {c₁ c₂ : ℝ≥0} (hc : c₁ ≤ c₂) (π₀ : prepartition I) :
+  l₁.partition_filter_aux I π₀ c₁ ≤ l₂.partition_filter_aux I π₀  c₂ :=
+inf_le_inf_right _ $ prepartition_filter_aux_mono I h hc
+
+@[mono] lemma partition_filter_mono (I : box ι) {l₁ l₂ : integration_filter} (h : l₁ ≤ l₂)
+  (π₀ : prepartition I) :
+  l₁.partition_filter I π₀ ≤ l₂.partition_filter I π₀ :=
+inf_le_inf_right _ $ prepartition_filter_mono I h
+
+lemma has_basis_prepartition_filter_aux (l : integration_filter) (I : box ι) (c : ℝ≥0) :
+  (l.prepartition_filter_aux I c).has_basis
+    (λ r : (ι → ℝ) → ℝ, ∀ x ∈ I.Icc, 0 < r x ∧ (l.bRiemann → r x = r I.upper))
+    (l.to_set I c) :=
+has_basis_binfi_principal'
+  (λ r₁ hr₁ r₂ hr₂,
+    ⟨λ x, min (r₁ x) (r₂ x), λ x hx, ⟨lt_min (hr₁ x hx).1 (hr₂ x hx).1,
+      λ hR, congr_arg2 min ((hr₁ x hx).2 hR) ((hr₂ x hx).2 hR)⟩,
+      to_set_mono _ le_rfl le_rfl (λ x hx, min_le_left _ _),
+      to_set_mono _ le_rfl le_rfl (λ x hx, min_le_right _ _)⟩)
+    ⟨λ _, 1, λ x hx, ⟨zero_lt_one, λ _, rfl⟩⟩
+
+lemma has_basis_partition_filter_aux (l : integration_filter) (I : box ι) (π₀ : prepartition I)
+  (c : ℝ≥0) :
+  (l.partition_filter_aux I π₀ c).has_basis
+    (λ r : (ι → ℝ) → ℝ, ∀ x ∈ I.Icc, 0 < r x ∧ (l.bRiemann → r x = r I.upper))
+    (λ r, l.to_set I c r ∩ {π | π.to_prepartition ≤ π₀ ∧ π.Union = π₀.Union}) :=
+(l.has_basis_prepartition_filter_aux I c).inf_principal _
+
+lemma nonempty_to_set_inter_le_Union_eq (l : integration_filter) {I : box ι} (π₀ : prepartition I)
+  {c : ℝ≥0} (hc : π₀.distortion ≤ c) {r : (ι → ℝ) → ℝ} (hr : ∀ x ∈ I.Icc, 0 < r x) :
+  (l.to_set I c r ∩ {π | π.to_prepartition ≤ π₀ ∧ π.Union = π₀.Union}).nonempty :=
 begin
-  refine supr_congr id surjective_id (λ c, _),
-  simp only [Henstock'_aux, Henstock, inf_assoc, inf_principal, forall_and_distrib, set_of_and,
-    is_Henstock, id]
+  rcases π₀.exists_tagged_le_is_Henstock_is_subordinate_Union_eq hr
+    with ⟨π, hle, hH, hr, hd, hU⟩,
+  exact ⟨π, ⟨hr, λ _, hH, λ _, hd.trans_le hc⟩, ⟨hle, hU⟩⟩
 end
 
-lemma has_basis_McShane :
-  (@McShane _ _ I).has_basis (λ r : (ι → ℝ) → ℝ, ∀ x ∈ I.Icc, 0 < r x)
-    (λ r, {π | π.is_subordinate r}) :=
-begin
-  refine has_basis_binfi_principal' (λ r hr r' hr', ⟨λ x, min (r x) (r' x), _, _, _⟩)
-    ⟨1, λ _ _, zero_lt_one⟩,
-  exacts [λ x hx, lt_min (hr x hx) (hr' x hx), λ π hπ, hπ.mono $ λ x hx, min_le_left _ _,
-    λ π hπ, hπ.mono $ λ x hx, min_le_right _ _]
-end
+instance partition_filter_aux_ne_bot (l : integration_filter) (I : box ι) (π₀ : prepartition I) :
+  (l.partition_filter_aux I π₀ π₀.distortion).ne_bot :=
+(l.has_basis_partition_filter_aux I _ _).ne_bot_iff.2 $ λ r hr,
+  l.nonempty_to_set_inter_le_Union_eq π₀ le_rfl (λ x hx, (hr x hx).1)
 
-lemma has_basis_Henstock :
-  (@Henstock _ _ I).has_basis (λ r : (ι → ℝ) → ℝ, ∀ x ∈ I.Icc, 0 < r x)
-    (λ r, {π | π.is_subordinate r ∧ π.is_Henstock}) :=
-has_basis_McShane.inf_principal _
+instance prepartition_filter_aux_ne_bot (l : integration_filter) (I : box ι) :
+  (l.prepartition_filter_aux I I.distortion).ne_bot :=
+by simpa only [prepartition.distortion_top]
+  using (l.partition_filter_aux_ne_bot I ⊤).mono inf_le_left
 
-lemma has_basis_Henstock'_aux (c : ℝ≥0) :
-  (@Henstock'_aux _ _ I c).has_basis (λ r : (ι → ℝ) → ℝ, ∀ x ∈ I.Icc, 0 < r x)
-    (λ r, {π | π.is_subordinate r ∧ π.is_Henstock ∧ ∀ (J ∈ π), (J : _).distortion ≤ c}) :=
-by simpa only [Henstock'_aux, ← set_of_and, and.assoc]
-  using (@has_basis_Henstock ι _ I).inf_principal {π | ∀ J ∈ π, distortion J ≤ c}
+instance partition_filter_ne_bot (l : integration_filter) (I : box ι) (π₀ : prepartition I) :
+  (l.partition_filter I π₀).ne_bot :=
+(l.partition_filter_aux_ne_bot I π₀).mono $ inf_le_inf_right _ $ le_supr _ _
 
-lemma has_basis_Henstock' :
-  (@Henstock' _ _ I).has_basis (λ r : ℝ≥0 → (ι → ℝ) → ℝ, ∀ c (x ∈ I.Icc), 0 < r c x)
-    (λ r, {π | ∃ c, π.is_subordinate (r c) ∧ π.is_Henstock ∧
-      ∀ (J ∈ π), (J : _).distortion ≤ c}) :=
-by simpa only [set_of_exists] using has_basis_supr has_basis_Henstock'_aux
+instance prepartition_filter_ne_bot (l : integration_filter) (I : box ι) :
+  (l.prepartition_filter I).ne_bot :=
+(l.partition_filter_ne_bot I ⊤).mono inf_le_left
 
-lemma has_basis_Henstock'_nat :
-  (@Henstock' _ _ I).has_basis
-    (λ r : ℕ → (ι → ℝ) → ℝ, (∀ c (x ∈ I.Icc), 0 < r c x) ∧ (∀ {c₁ c₂}, c₁ ≤ c₂ → r c₂ ≤ r c₁))
-    (λ r, {π | ∃ c, π.is_subordinate (r c) ∧ π.is_Henstock ∧
-      ∀ (J ∈ π), (J : _).distortion ≤ c}) :=
-begin
-  refine has_basis_Henstock'.to_has_basis (λ r hr, _) (λ r hr, _),
-  { refine ⟨λ n x, (finset.range (n + 1)).inf' nonempty_range_succ (λ n, r n x), ⟨_, _⟩, _⟩,
-    { exact λ c x hx, (lt_inf'_iff _ _).2 (λ k hk, hr _ _ hx) },
-    { intros m n hle x,
-      refine le_inf' _ _ (λ k hk, inf'_le _ (range_mono _ hk)),
-      exact add_le_add hle le_rfl },
-    { rintro π ⟨n, hr, hH, hn⟩,
-      exact ⟨n, hr.mono $ λ J hJ, inf'_le _ (finset.mem_range.2 n.lt_succ_self), hH, hn⟩ } },
-  { refine ⟨λ c, r ⌈(c : ℝ)⌉₊, λ c x, hr.1 _ _, _⟩,
-    rintro π ⟨c, hr, hH, hc⟩,
-    refine ⟨_, hr, hH, λ J hJ, (hc J hJ).trans _⟩,
-    rw [← nnreal.coe_le_coe, nnreal.coe_nat_cast], exact le_nat_ceil _ }
-end
+instance : decidable_rel ((≤) : integration_filter → integration_filter → Prop) :=
+λ _ _, and.decidable
 
-lemma has_basis_Henstock'_antimono :
-  (@Henstock' _ _ I).has_basis
-    (λ r : ℝ≥0 → (ι → ℝ) → ℝ, (∀ c (x ∈ I.Icc), 0 < r c x) ∧ (∀ {c₁ c₂}, c₁ ≤ c₂ → r c₂ ≤ r c₁))
-    (λ r, {π | ∃ c, π.is_subordinate (r c) ∧ π.is_Henstock ∧ ∀ (J ∈ π), (J : _).distortion ≤ c}) :=
-has_basis_Henstock'_nat.to_has_basis
-  (λ r hr, ⟨λ c, r ⌈(c : ℝ)⌉₊, ⟨λ c x hx, hr.1 _ x hx, λ c₁ c₂ hle, hr.2 $ nat_ceil_mono hle⟩,
-    λ π ⟨c, hc⟩, ⟨_, hc.1, hc.2.1, λ J hJ, (hc.2.2 J hJ).trans $
-      by { rw [← nnreal.coe_le_coe, nnreal.coe_nat_cast], exact le_nat_ceil _ }⟩⟩)
-  (λ r hr, ⟨r ∘ coe, ⟨λ n x hx, hr.1 n x hx, λ m n hle, hr.2 (nat.cast_le.2 hle)⟩,
-    λ π ⟨m, hm⟩, ⟨m, hm⟩⟩)
+instance : decidable_eq integration_filter := λ x y, decidable_of_iff _ (ext_iff x y).symm
 
-lemma has_basis_Riemann' :
-  (@Riemann' _ _ I).has_basis (λ r : ℝ, 0 < r) (λ r, {π | is_subordinate π  (λ _, r)}) :=
-has_basis_binfi_principal' (λ r hr r' hr', ⟨min r r', lt_min hr hr',
-  λ π hπ, hπ.mono (λ x hx, min_le_left r r'), λ π hπ, hπ.mono (λ x hx, min_le_right r r')⟩)
-  ⟨1, zero_lt_one⟩
+def Riemann : integration_filter := ⟨tt, tt, ff⟩
 
-lemma has_basis_Riemann :
-  (@Riemann _ _ I).has_basis (λ r : ℝ, 0 < r)
-    (λ r, {π | is_subordinate π  (λ _, r) ∧ π.is_Henstock}) :=
-has_basis_Riemann'.inf_principal {π | is_Henstock π}
+def Riemann' : integration_filter := ⟨tt, ff, ff⟩
 
-lemma Henstock_le_McShane : @Henstock _ _ I ≤ McShane := inf_le_left
+def McShane : integration_filter := ⟨ff, ff, ff⟩
 
-lemma McShane_le_Riemann' : @McShane _ _ I ≤ Riemann' :=
-le_binfi $ λ r hr, binfi_le_of_le (λ _, r) (λ _ _, hr) le_rfl
+def Henstock : integration_filter := ⟨ff, tt, ff⟩
 
-lemma Henstock_le_Riemann : @Henstock _ _ I ≤ Riemann :=
-inf_le_inf_right _ McShane_le_Riemann'
-
-lemma Henstock'_le_Henstock : @Henstock' _ _ I ≤ Henstock :=
-supr_le $ λ c, inf_le_left
-
-lemma Riemann_le_Riemann' : @Riemann _ _ I ≤ Riemann' := inf_le_left
-
-lemma Henstock'_aux_ne_bot {c : ℝ≥0} (h : distortion I ≤ c) : (@Henstock'_aux _ _ I c).ne_bot :=
-(has_basis_Henstock'_aux c).ne_bot_iff.2 $ λ r hr,
-  let ⟨π, hHen, hr, hsub⟩ := exists_is_Henstock_is_subordinate_homothetic I hr in
-  ⟨π, hr, hHen, λ J hJ, let ⟨n, hn⟩ := hsub J hJ in (distortion_eq_of_sub_eq_div hn).trans_le h⟩
-
-instance Henstock'_ne_bot : (@Henstock' _ _ I).ne_bot :=
-(Henstock'_aux_ne_bot le_rfl).mono $ le_supr _ _
-
-instance Henstock_ne_bot : (@Henstock _ _ I).ne_bot := ne_bot_of_le Henstock'_le_Henstock
-instance McShane_ne_bot : (@McShane _ _ I).ne_bot := ne_bot_of_le Henstock_le_McShane
-instance Riemann_ne_bot : (@Riemann _ _ I).ne_bot := ne_bot_of_le Henstock_le_Riemann
-instance Riemann'_ne_bot : (@Riemann' _ _ I).ne_bot := ne_bot_of_le McShane_le_Riemann'
+end integration_filter
 
 end box_integral

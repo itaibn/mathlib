@@ -292,58 +292,6 @@ diam_le_of_forall_dist_le this $ λ x hx y hy,
 
 end distortion
 
-/-- For a box `I`, the hyperplanes passing through its center split `I` into `2 ^ card ι` boxes.
-`box_integral.box.split_center_box I s` is one of these boxes. See also
-`box_integral.partition.split_center` for the corresponding `box_integral.partition`. -/
-def split_center_box (I : box ι) (s : set ι) : box ι :=
-{ lower := s.piecewise (λ i, (I.lower i + I.upper i) / 2) I.lower,
-  upper := s.piecewise I.upper (λ i, (I.lower i + I.upper i) / 2),
-  lower_lt_upper := λ i, by { dunfold set.piecewise, split_ifs;
-    simp only [left_lt_add_div_two, add_div_two_lt_right, I.lower_lt_upper] } }
-
-lemma mem_split_center_box {s : set ι} {y : ι → ℝ} :
-  y ∈ I.split_center_box s ↔ y ∈ I ∧ ∀ i, (I.lower i + I.upper i) / 2 < y i ↔ i ∈ s :=
-begin
-  simp only [split_center_box, mem_def, ← forall_and_distrib],
-  refine forall_congr (λ i, _),
-  dunfold set.piecewise,
-  split_ifs with hs; simp only [hs, iff_true, iff_false, not_lt],
-  exacts [⟨λ H, ⟨⟨(left_lt_add_div_two.2 (I.lower_lt_upper i)).trans H.1, H.2⟩, H.1⟩, λ H, ⟨H.2, H.1.2⟩⟩,
-    ⟨λ H, ⟨⟨H.1, H.2.trans (add_div_two_lt_right.2 (I.lower_lt_upper i)).le⟩, H.2⟩, λ H, ⟨H.1.1, H.2⟩⟩]
-end
-
-lemma split_center_box_le (I : box ι) (s : set ι) : I.split_center_box s ≤ I :=
-λ x hx, (mem_split_center_box.1 hx).1
-
-lemma disjoint_split_center_box (I : box ι) {s t : set ι} (h : s ≠ t) :
-  disjoint (I.split_center_box s : set (ι → ℝ)) (I.split_center_box t) :=
-begin
-  rintro y ⟨hs, ht⟩, apply h,
-  ext i,
-  rw [mem_coe, mem_split_center_box] at hs ht,
-  rw [← hs.2, ← ht.2]
-end
-
-lemma injective_split_center_box (I : box ι) : injective I.split_center_box :=
-λ s t H, by_contra $ λ Hne, (I.disjoint_split_center_box Hne).ne (nonempty_coe _).ne_empty (H ▸ rfl)
-
-@[simp] lemma exists_mem_split_center_box {I : box ι} {x : ι → ℝ} :
-  (∃ s, x ∈ I.split_center_box s) ↔ x ∈ I :=
-⟨λ ⟨s, hs⟩, I.split_center_box_le s hs,
-  λ hx, ⟨{i | _ < x i}, mem_split_center_box.2 ⟨hx, λ i, iff.rfl⟩⟩⟩
-
-/-- `box_integral.box.split_center_box` bundled as a `function.embeddinge`. -/
-@[simps] def split_center_box_emb (I : box ι) : set ι ↪ box ι :=
-⟨split_center_box I, injective_split_center_box I⟩
-
-@[simp] lemma Union_coe_split_center_box (I : box ι) :
-  (⋃ s, (I.split_center_box s : set (ι → ℝ))) = I :=
-by { ext x, simp }
-
-@[simp] lemma upper_sub_lower_split_center_box (I : box ι) (s : set ι) (i : ι) :
-  (I.split_center_box s).upper i - (I.split_center_box s).lower i = (I.upper i - I.lower i) / 2 :=
-by by_cases hs : i ∈ s; field_simp [split_center_box, hs, mul_two, two_mul]
-
 end box
 
 end box_integral

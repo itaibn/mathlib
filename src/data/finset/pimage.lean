@@ -27,6 +27,10 @@ by simp [to_finset]
 
 @[simp] theorem to_finset_some {a : α} : (some a).to_finset = {a} := rfl
 
+@[simp] lemma coe_to_finset (o : part α) [decidable o.dom] :
+  (o.to_finset : set α) = {x | x ∈ o} :=
+set.ext $ λ x, mem_to_finset
+
 end part
 
 namespace finset

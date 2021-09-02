@@ -24,15 +24,6 @@ namespace box
   get := λ hx, ⟨I.lower, update I.upper i (min x (I.upper i)),
     forall_lt_update_iff.2 ⟨lt_min hx $ I.lower_lt_upper i, λ j _, I.lower_lt_upper j⟩⟩ }
 
-/-- Given a box `I` and `x ∈ (I.lower i, I.upper i)`, the hyperplane `{y : ι → ℝ | y i = x}` splits
-`I` into two boxes. `box_integral.box.split_upper I i x hx` is the box `I ∩ {y | x < y i}`
-(if it is nonempty). -/
-@[simps] def split_upper (I : box ι) (i : ι) (x : ℝ) :
-  part (box ι) :=
-{ dom := x < I.upper i,
-  get := λ hx, ⟨update I.lower i (max x (I.lower i)), I.upper,
-    forall_update_lt_iff.2 ⟨max_lt hx $ I.lower_lt_upper i, λ j _, I.lower_lt_upper j⟩⟩ }
-
 @[simp] lemma mem_split_lower_get_iff (I : box ι) {i x hx} {y : ι → ℝ} :
   y ∈ (I.split_lower i x).get hx ↔ y ∈ I ∧ y i ≤ x :=
 begin
@@ -52,7 +43,7 @@ set.ext $ λ y, I.mem_split_lower_get_iff
 lemma split_lower_get_le (I : box ι) {i x hx} : (I.split_lower i x).get hx ≤ I :=
 coe_subset_coe.1 $ by simp only [coe_split_lower_get, inter_subset_left]
 
-@[simp] lemma mem_split_lower {I J : box ι} {i x} :
+lemma mem_split_lower {I J : box ι} {i x} :
   J ∈ I.split_lower i x ↔ (J : set (ι → ℝ)) = I ∩ {y | y i ≤ x} :=
 begin
   refine ⟨λ ⟨H, Heq⟩, Heq ▸ coe_split_lower_get _, λ H, ⟨_, injective_coe _⟩⟩,
@@ -61,14 +52,12 @@ begin
   { rw [coe_split_lower_get, H] }
 end
 
-@[simp] lemma exists_coe_eq_inter_eval_le_iff {I : box ι} {i x y} :
-  (∃ J : box ι, (J : set (ι → ℝ)) = I ∩ {y | y i ≤ x} ∧ y ∈ J) ↔ y ∈ I ∧ y i ≤ x :=
+@[simp] lemma Union_coe_mem_split_lower (I : box ι) (i : ι) (x : ℝ) :
+  (⋃ J ∈ I.split_lower i x, ↑J : set (ι → ℝ)) = I ∩ {y | y i ≤ x} :=
 begin
-  fsplit,
-  { rintro ⟨J, hJ, hy⟩,
-    rwa [← mem_coe, hJ] at hy },
-  { rintro ⟨hI, hx⟩,
-    refine ⟨_, mem_split_lower.1 ⟨_, rfl⟩, I.mem_split_lower_get hI hx⟩ }
+  ext y, simp only [mem_Union], fsplit,
+  { rintro ⟨J, hJ, hy⟩, rwa mem_split_lower.1 hJ at hy },
+  { exact λ hy, ⟨_, ⟨_, rfl⟩, I.mem_split_lower_get hy.1 hy.2⟩ }
 end
 
 lemma split_lower_of_le_lower (I : box ι) {i x} (h : x ≤ I.lower i) :
@@ -81,6 +70,15 @@ begin
   rw ← @part.get_eq_iff_eq_some _ (I.split_lower i x) ((I.lower_lt_upper i).trans_le h),
   ext y, simpa using (show y ∈ I → y i ≤ x, from λ hy, (hy i).2.trans h)
 end
+
+/-- Given a box `I` and `x ∈ (I.lower i, I.upper i)`, the hyperplane `{y : ι → ℝ | y i = x}` splits
+`I` into two boxes. `box_integral.box.split_upper I i x hx` is the box `I ∩ {y | x < y i}`
+(if it is nonempty). -/
+@[simps] def split_upper (I : box ι) (i : ι) (x : ℝ) :
+  part (box ι) :=
+{ dom := x < I.upper i,
+  get := λ hx, ⟨update I.lower i (max x (I.lower i)), I.upper,
+    forall_update_lt_iff.2 ⟨max_lt hx $ I.lower_lt_upper i, λ j _, I.lower_lt_upper j⟩⟩ }
 
 @[simp] lemma mem_split_upper_get_iff (I : box ι) {i x hx} {y : ι → ℝ} :
   y ∈ (I.split_upper i x).get hx ↔ y ∈ I ∧ x < y i :=
@@ -100,7 +98,7 @@ set.ext $ λ y, I.mem_split_upper_get_iff
 lemma split_upper_get_le (I : box ι) {i x hx} : (I.split_upper i x).get hx ≤ I :=
 coe_subset_coe.1 $ by simp only [coe_split_upper_get, inter_subset_left]
 
-@[simp] lemma mem_split_upper {I J : box ι} {i x} :
+lemma mem_split_upper {I J : box ι} {i x} :
   J ∈ I.split_upper i x ↔ (J : set (ι → ℝ)) = I ∩ {y | x < y i} :=
 begin
   refine ⟨λ ⟨H, Heq⟩, Heq ▸ coe_split_upper_get _, λ H, ⟨_, injective_coe _⟩⟩,
@@ -109,14 +107,12 @@ begin
   { rw [coe_split_upper_get, H] }
 end
 
-@[simp] lemma exists_coe_eq_inter_lt_eval_iff {I : box ι} {i x y} :
-  (∃ J : box ι, (J : set (ι → ℝ)) = I ∩ {y | x < y i} ∧ y ∈ J) ↔ y ∈ I ∧ x < y i :=
+@[simp] lemma Union_coe_mem_split_upper (I : box ι) (i : ι) (x : ℝ) :
+  (⋃ J ∈ I.split_upper i x, ↑J : set (ι → ℝ)) = I ∩ {y | x < y i} :=
 begin
-  fsplit,
-  { rintro ⟨J, hJ, hy⟩,
-    rwa [← mem_coe, hJ] at hy },
-  { rintro ⟨hI, hx⟩,
-    refine ⟨_, mem_split_upper.1 ⟨_, rfl⟩, I.mem_split_upper_get hI hx⟩ }
+  ext y, simp only [mem_Union], fsplit,
+  { rintro ⟨J, hJ, hy⟩, rwa mem_split_upper.1 hJ at hy },
+  { exact λ hy, ⟨_, ⟨_, rfl⟩, I.mem_split_upper_get hy.1 hy.2⟩ }
 end
 
 lemma split_upper_of_le_lower (I : box ι) {i x} (h : x ≤ I.lower i) :
@@ -143,27 +139,6 @@ begin
     { simp [split_upper_of_le_lower _ hx, split_lower_of_le_lower _ hx] },
     { simp [split_upper_of_upper_le _ hx, split_lower_of_upper_le _ hx] } }
 end
-      
-lemma disjoint_of_mem_split_lower_of_mem_split_upper {I Jl Ju : box ι} {i : ι} {x : ℝ}
-  (Hl : Jl ∈ I.split_lower i x) (Hu : Ju ∈ I.split_upper i x) :
-  disjoint (Jl : set (ι → ℝ)) Ju :=
-begin
-  rw [mem_split_lower.1 Hl, mem_split_upper.1 Hu],
-  refine (disjoint.inf_left' _ _).inf_right' _,
-  exact λ y hy, @not_lt_of_le _ _ (y i) x hy.1 hy.2
-end
-
-lemma ne_of_mem_split_lower_of_mem_split_upper {I Jl Ju : box ι} {i : ι} {x : ℝ}
-  (hl : Jl ∈ I.split_lower i x) (hu : Ju ∈ I.split_upper i x) : Jl ≠ Ju :=
-ne_of_disjoint_coe (disjoint_of_mem_split_lower_of_mem_split_upper hl hu)
-
-lemma disjoint_split_lower_get_split_upper_get {I : box ι} {i : ι} {x : ℝ} (hl hu) :
-  disjoint ((I.split_lower i x).get hl : set (ι → ℝ)) ((I.split_upper i x).get hu) :=
-disjoint_of_mem_split_lower_of_mem_split_upper (part.get_mem _) (part.get_mem _)
-
-lemma split_lower_get_ne_split_upper_get {I : box ι} {i : ι} {x : ℝ} (hl hu) :
-  (I.split_lower i x).get hl ≠ (I.split_upper i x).get hu :=
-ne_of_mem_split_lower_of_mem_split_upper (part.get_mem _) (part.get_mem _)
 
 lemma comap_split_lower_get_of_not_mem_range {ι' : Type*} (I : box ι) (i x hx)
   (f : ι' → ι) (h : i ∉ range f) :
@@ -211,46 +186,33 @@ end
 
 end box
 
-namespace partition
+namespace prepartition
 
-private def split_boxes (I : box ι) (i : ι) (x : ℝ) : finset (box ι) :=
-(I.split_lower i x).to_finset ∪ (I.split_upper i x).to_finset
-
-private lemma mem_split_boxes {I J : box ι} {i x} :
-  J ∈ split_boxes I i x ↔ J ∈ I.split_lower i x ∨ J ∈ I.split_upper i x :=
-by simp [split_boxes]
+variables {I J : box ι} {i : ι} {x : ℝ}
 
 /-- The partition of `I : box ι` into the boxes `I ∩ {y | y ≤ x i}` and `I ∩ {y | x i < y}`.
 One of these boxes can be empty, then this partition is just the single-box partition `⊤`. -/
-def split (I : box ι) (i : ι) (x : ℝ) :
-  partition I :=
-{ boxes := split_boxes I i x,
-  le_of_mem' := λ J hJ, by { rcases mem_split_boxes.1 hJ with ⟨H, rfl⟩|⟨H, rfl⟩,
-    exacts [I.split_lower_get_le, I.split_upper_get_le] },
-  exists_mem' := λ y hy, by simp [mem_split_boxes, exists_or_distrib, or_and_distrib_right,
-    ← and_or_distrib_left, le_or_lt, hy],
-  pairwise_disjoint :=
-    begin
-      simp only [pairwise_on, finset.mem_coe, mem_split_boxes],
-      rintro J₁ (h₁|h₁) J₂ (h₂|h₂) Hne,
-      exacts [(Hne $ part.mem_unique h₁ h₂).elim,
-        box.disjoint_of_mem_split_lower_of_mem_split_upper h₁ h₂,
-        (box.disjoint_of_mem_split_lower_of_mem_split_upper h₂ h₁).symm,
-        (Hne $ part.mem_unique h₁ h₂).elim]
-    end }
+def split (I : box ι) (i : ι) (x : ℝ) : prepartition I :=
+((subsingle I (I.split_lower i x) $ λ J ⟨H, hJ⟩, hJ ▸ I.split_lower_get_le).union_compl
+  (subsingle I (I.split_upper i x) $ λ J ⟨H, hJ⟩, hJ ▸ I.split_upper_get_le)).get $
+  by simp [diff_eq (I : set (ι → ℝ)) {y | y i ≤ x}, compl_set_of]
 
-lemma mem_split_iff {I J : box ι} {i : ι} {x : ℝ} :
-  J ∈ split I i x ↔ J ∈ I.split_lower i x ∨ J ∈ I.split_upper i x :=
-mem_split_boxes
+@[simp] lemma mem_split_iff : J ∈ split I i x ↔ J ∈ I.split_lower i x ∨ J ∈ I.split_upper i x :=
+by simp [split]
 
-lemma mem_split_iff' {I J : box ι} {i : ι} {x : ℝ} :
-  J ∈ split I i x ↔ (J : set (ι → ℝ)) = I ∩ {y | y i ≤ x} ∨
-    (J : set (ι → ℝ)) = I ∩ {y | x < y i} :=
-by simp [mem_split_iff]
+lemma mem_split_iff' : J ∈ split I i x ↔
+  (J : set (ι → ℝ)) = I ∩ {y | y i ≤ x} ∨ (J : set (ι → ℝ)) = I ∩ {y | x < y i} :=
+by simp [mem_split_iff, box.mem_split_lower, box.mem_split_upper]
+
+lemma is_partition_split (I : box ι) (i : ι) (x : ℝ) : is_partition (split I i x) :=
+is_partition_union_compl_get _
+
+@[simp] lemma Union_split (I : box ι) (i : ι) (x : ℝ) : (split I i x).Union = I :=
+(is_partition_split I i x).Union_eq
 
 /-- If `I.lower i < x < I.upper i`, then the hyperplane `{y | y i = x}` splits `I` into two
 boxes. -/
-lemma split_boxes_of_mem_Ioo {I : box ι} {i : ι} {x : ℝ} (h : x ∈ Ioo (I.lower i) (I.upper i)) :
+lemma split_boxes_of_mem_Ioo (h : x ∈ Ioo (I.lower i) (I.upper i)) :
   (split I i x).boxes = {(I.split_lower i x).get h.1, (I.split_upper i x).get h.2} :=
 begin
   ext J,
@@ -258,10 +220,9 @@ begin
 end
 
 /-- If `x ∉ (I.lower i, I.upper i)`, then the hyperplane `{y | y i = x}` does not split `I`. -/
-lemma split_of_not_mem_Ioo {I : box ι} {i : ι} {x : ℝ} (h : x ∉ Ioo (I.lower i) (I.upper i)) :
-  split I i x = ⊤ :=
+lemma split_of_not_mem_Ioo (h : x ∉ Ioo (I.lower i) (I.upper i)) : split I i x = ⊤ :=
 begin
-  symmetry, ext J hJ,
+  refine ((is_partition_top I).subset_iff_eq.1 $ λ J hJ, _).symm,
   rcases mem_top.1 hJ with rfl, clear hJ,
   rw [mem_split_iff],
   rw [mem_Ioo, not_and_distrib, not_lt, not_lt] at h,
@@ -269,43 +230,31 @@ begin
     simp only [box.split_lower_of_upper_le, box.split_upper_of_le_lower, h, part.mem_some]
 end
 
-lemma coe_eq_of_mem_split_of_mem_le {I J : box ι} {i : ι} {x : ℝ} {y : ι → ℝ}
-  (h₁ : J ∈ split I i x) (h₂ : y ∈ J) (h₃ : y i ≤ x) :
+lemma coe_eq_of_mem_split_of_mem_le {y : ι → ℝ} (h₁ : J ∈ split I i x) (h₂ : y ∈ J) (h₃ : y i ≤ x) :
   (J : set (ι → ℝ)) = I ∩ {y | y i ≤ x} :=
 (mem_split_iff'.1 h₁).resolve_right $ λ H,
   by { rw [← box.mem_coe, H] at h₂, exact h₃.not_lt h₂.2 }
 
-lemma coe_eq_of_mem_split_of_lt_mem {I J : box ι} {i : ι} {x : ℝ} {y : ι → ℝ}
-  (h₁ : J ∈ split I i x) (h₂ : y ∈ J) (h₃ : x < y i) :
+lemma coe_eq_of_mem_split_of_lt_mem {y : ι → ℝ} (h₁ : J ∈ split I i x) (h₂ : y ∈ J) (h₃ : x < y i) :
   (J : set (ι → ℝ)) = I ∩ {y | x < y i} :=
 (mem_split_iff'.1 h₁).resolve_left $ λ H,
   by { rw [← box.mem_coe, H] at h₂, exact h₃.not_le h₂.2 }
 
-@[simp] lemma restrict_split_get {I J : box ι} (h : I ≤ J) (i : ι) (x : ℝ) :
-   ((split J i x).restrict I).get h = split I i x :=
+@[simp] lemma restrict_split (h : I ≤ J) (i : ι) (x : ℝ) : (split J i x).restrict I = split I i x :=
 begin
-  ext J' hJ',
-  simp only [mem_split_iff', box.mem_inter, exists_prop, mem_restrict_get] at hJ' ⊢,
+  refine ((is_partition_split J i x).restrict h).subset_iff_eq.1 (λ J' hJ', _),
+  simp only [mem_split_iff', box.mem_inter, exists_prop, mem_restrict] at hJ' ⊢,
   rcases hJ' with ⟨J'', (H''|H''), Heq⟩; [left, right];
     rw [Heq, H'', ← inter_assoc, inter_eq_self_of_subset_left (box.coe_subset_coe.2 h)]
 end
 
-@[simp] lemma restrict_split {I J : box ι} (h : I ≤ J) (i : ι) (x : ℝ) :
-   (split J i x).restrict I = part.some (split I i x) :=
-part.get_eq_iff_eq_some.1 $ restrict_split_get h i x
-
-@[simp] lemma restrict_split_to_prepartition {I J : box ι} (h : I ≤ J) (i : ι) (x : ℝ) :
-   (split J i x).to_prepartition.restrict I = (split I i x).to_prepartition :=
-by rw [← restrict_get_to_prepartition _ _ h, restrict_split_get h]
-
-lemma inf_split {I : box ι} (π : partition I) (i : ι) (x : ℝ) :
+lemma inf_split (π : prepartition I) (i : ι) (x : ℝ) :
   π ⊓ split I i x = π.bUnion (λ J, split J i x) :=
-injective_to_prepartition $ prepartition.bUnion_congr_of_le rfl  $
-  λ J hJ, by rw [← restrict_get_to_prepartition _ _ hJ, restrict_split_get]
+bUnion_congr_of_le rfl $ λ J hJ, restrict_split hJ i x
 
 /-- Split a box along many hyperplanes `{y | y i = x}`; each hyperplane is given by the pair
 `(i x)`. -/
-def split_many (I : box ι) (s : finset (ι × ℝ)) : partition I :=
+def split_many (I : box ι) (s : finset (ι × ℝ)) : prepartition I :=
 s.inf (λ p, split I p.1 p.2)
 
 @[simp] lemma split_many_empty (I : box ι) : split_many I ∅ = ⊤ := finset.inf_empty
@@ -318,7 +267,13 @@ lemma split_many_le_split (I : box ι) {s : finset (ι × ℝ)} {p : ι × ℝ} 
   split_many I s ≤ split I p.1 p.2 :=
 finset.inf_le hp
 
-lemma inf_split_many {I : box ι} (π : partition I) (s : finset (ι × ℝ)) :
+lemma is_partition_split_many (I : box ι) (s : finset (ι × ℝ)) :
+  is_partition (split_many I s) :=
+finset.induction_on s (by simp only [split_many_empty, is_partition_top]) $
+  λ a s ha hs, by simpa only [split_many_insert, inf_split]
+    using hs.bUnion (λ J hJ, is_partition_split _ _ _)
+
+lemma inf_split_many {I : box ι} (π : prepartition I) (s : finset (ι × ℝ)) :
   π ⊓ split_many I s = π.bUnion (λ J, split_many J s) :=
 begin
   induction s using finset.induction_on with p s hp ihp,
@@ -343,7 +298,11 @@ begin
     exact (Hle hy).2 }
 end
 
-lemma exists_split_many_forall_nonempty_imp_le [fintype ι] (s : finset (box ι)) :
+section fintype
+
+variable [fintype ι]
+
+lemma exists_split_many_forall_nonempty_imp_le (s : finset (box ι)) :
   ∃ t : finset (ι × ℝ), ∀ (I : box ι) (J ∈ s) (J' ∈ split_many I t),
     (J ∩ J' : set (ι → ℝ)).nonempty → J' ≤ J :=
 begin
@@ -352,68 +311,41 @@ begin
   exact λ p hp, finset.mem_bUnion.2 ⟨J, hJ, finset.mem_bUnion.2 ⟨i, finset.mem_univ _, hp⟩⟩
 end
 
-lemma exists_split_many_le [fintype ι] {I : box ι} (π : partition I) : ∃ s, split_many I s ≤ π :=
-(exists_split_many_forall_nonempty_imp_le π.boxes).imp $ λ s hs, le_def'.2 $
+/-- If `π` is a partition of `I`, then there exists a finite set `s` of hyperplanes such that
+`split_many I s ≤ π`. -/
+lemma is_partition.exists_split_many_le {I : box ι} {π : prepartition I}
+  (h : is_partition π) : ∃ s, split_many I s ≤ π :=
+(exists_split_many_forall_nonempty_imp_le π.boxes).imp $ λ s hs, h.le_iff.2 $
   λ Js hJs J hJ x hxs hx, hs I J hJ _ hJs ⟨x, hx, hxs⟩
 
-end partition
-
-namespace prepartition
-
-variables [fintype ι] {I : box ι} (π : prepartition I)
-
-lemma exists_partition_superset : ∃ π' : partition I, π ⊆ π'.to_prepartition :=
+/-- For every prepartition `π` of `I` there exists a prepartition that covers exactly
+`I \ π.Union`. -/
+lemma exists_Union_eq_diff (π : prepartition I) :
+  ∃ π' : prepartition I, π'.Union = I \ π.Union :=
 begin
-  rcases partition.exists_split_many_forall_nonempty_imp_le π.boxes with ⟨s, hs⟩,
-  refine ⟨⟨π.discarding_union (partition.split_many I s).to_prepartition, λ x hx, _⟩,
-    left_subset_discarding_union _ _⟩,
-  simp only [← mem_Union, ← box.mem_coe],
-  erw [bUnion_mem_discarding_union_of_nonempty_inter_imp_le (hs I)],
-  rcases (partition.split_many I s).exists_mem hx with ⟨J, hJ, hx⟩,
-  exact or.inr (mem_Union.2 ⟨J, mem_Union.2 ⟨hJ, hx⟩⟩)
+  rcases exists_split_many_forall_nonempty_imp_le π.boxes with ⟨s, hs⟩,
+  refine ⟨(split_many I s).filter (λ J', ∀ J ∈ π, disjoint (J : set (ι → ℝ)) J'), _⟩,
+  ext x,
+  simp only [not_exists, exists_prop, mem_Union, mem_filter, not_and, box.mem_coe, mem_diff],
+  fsplit,
+  { rintro ⟨J', ⟨hJ's, hJ'⟩, hx'⟩,
+    exact ⟨le_of_mem _ hJ's hx', λ J hJ hx, hJ' J hJ ⟨hx, hx'⟩⟩ },
+  { rintro ⟨hxI, hxπ⟩,
+    rcases is_partition_split_many I s x hxI with ⟨J', hJ', hx'⟩,
+    refine ⟨J', ⟨hJ', λ J hJ y hy, _⟩, hx'⟩,
+    exact hxπ J hJ (hs I J hJ J' hJ' ⟨y, hy⟩ hx') }
 end
 
-def to_partition : partition I := π.exists_partition_superset.some
+def compl (π : prepartition I) : prepartition I := π.exists_Union_eq_diff.some
 
-lemma subset_to_partition : π ⊆ π.to_partition.to_prepartition :=
-π.exists_partition_superset.some_spec
+@[simp] lemma Union_compl (π : prepartition I) : π.compl.Union = I \ π.Union :=
+π.exists_Union_eq_diff.some_spec
 
-end prepartition
-
-namespace partition
-
-@[elab_as_eliminator]
-lemma split_induction_on [fintype ι] {I : box ι} (π : partition I)
-  {p : Π J : box ι, partition J → Prop}
-  (H_top : ∀ J ≤ I, p J ⊤) (H_split : ∀ (J ≤ I) i x, p J (split J i x))
-  (H_bUnion : ∀ (J ≤ I) (π : partition J) (πi : Π J', partition J'),
-    (∀ J' ∈ π, p J' (πi J')) → (p J (π.bUnion (λ J', πi J')) ↔ p J π)) : p I π :=
-begin
-  have : ∀ (s : finset (ι × ℝ)) (J ≤ I), p J (split_many J s),
-  { intros s J hle, induction s using finset.induction_on with p s hps ihs,
-    { simpa using H_top J hle },
-    { rw [split_many_insert, inf_split],
-      rwa H_bUnion J hle,
-      exact λ J' hJ', H_split _ (le_trans (le_of_mem _ hJ') hle) _ _ } },
-  rcases exists_split_many_le π with ⟨s, hs⟩,
-  rw [← inf_eq_right, inf_split_many] at hs,
-  rw [← H_bUnion I le_rfl, hs],
-  exacts [this s I le_rfl, λ J hJ, this s J (le_of_mem _ hJ)]
-end
-
-@[elab_as_eliminator]
-lemma split_induction_on' [fintype ι] {I : box ι} (π : partition I)
-  (p : box ι → finset (box ι) → Prop) (H_top : ∀ J ≤ I, p J {J})
-  (H_split : ∀ (J ≤ I) i x hl hu, p J {(J.split_lower i x).get hl, (J.split_upper i x).get hu})
-  (H_bUnion : ∀ (J ≤ I) (π : partition J) (πi : Π J', partition J'),
-    (∀ J' ∈ π, p J' (πi J').boxes) → (p J (π.bUnion (λ J', πi J')).boxes ↔ p J π.boxes)) :
-  p I π.boxes :=
-begin
-  refine box_integral.partition.split_induction_on π H_top (λ J hJ i x, _) H_bUnion,
-  by_cases hx : x ∈ Ioo (J.lower i) (J.upper i),
-  { rw split_boxes_of_mem_Ioo hx, exact H_split J hJ i x hx.1 hx.2 },
-  { rw [split_of_not_mem_Ioo hx, top_boxes], exact H_top J hJ }
-end
+/-- Since the definition of `box_integral.prepartition.compl` uses `Exists.some`,
+the result depends only on `π.Union`. -/
+lemma compl_congr {π₁ π₂ : prepartition I} (h : π₁.Union = π₂.Union) :
+  π₁.compl = π₂.compl :=
+by { dunfold compl, congr' 1, rw h }
 
 @[to_additive]
 protected lemma prod_bUnion_boxes {M : Type*} [comm_monoid M] {I : box ι} (π : partition I)

@@ -1050,16 +1050,16 @@ sup_sdiff_self_right
 @[simp] theorem diff_union_self {s t : set α} : (s \ t) ∪ t = s ∪ t :=
 sup_sdiff_self_left
 
-theorem diff_inter_self {a b : set α} : (b \ a) ∩ a = ∅ :=
+@[simp] theorem diff_inter_self {a b : set α} : (b \ a) ∩ a = ∅ :=
 inf_sdiff_self_left
 
-theorem diff_inter_self_eq_diff {s t : set α} : s \ (t ∩ s) = s \ t :=
+@[simp] theorem diff_inter_self_eq_diff {s t : set α} : s \ (t ∩ s) = s \ t :=
 sdiff_inf_self_right
 
-theorem diff_self_inter {s t : set α} : s \ (s ∩ t) = s \ t :=
+@[simp] theorem diff_self_inter {s t : set α} : s \ (s ∩ t) = s \ t :=
 sdiff_inf_self_left
 
-theorem diff_eq_self {s t : set α} : s \ t = s ↔ t ∩ s ⊆ ∅ :=
+@[simp] theorem diff_eq_self {s t : set α} : s \ t = s ↔ t ∩ s ⊆ ∅ :=
 show s \ t = s ↔ t ⊓ s ≤ ⊥, from sdiff_eq_self_iff_disjoint
 
 @[simp] theorem diff_singleton_eq_self {a : α} {s : set α} (h : a ∉ s) : s \ {a} = s :=

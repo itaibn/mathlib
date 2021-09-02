@@ -52,7 +52,8 @@ lemma sup_union [decidable_eq β] : (s₁ ∪ s₂).sup f = s₁.sup f ⊔ s₂.
 finset.induction_on s₁ (by rw [empty_union, sup_empty, bot_sup_eq]) $ λ a s has ih,
 by rw [insert_union, sup_insert, sup_insert, ih, sup_assoc]
 
-theorem sup_congr {f g : β → α} (hs : s₁ = s₂) (hfg : ∀a∈s₂, f a = g a) : s₁.sup f = s₂.sup g :=
+@[congr] theorem sup_congr {f g : β → α} (hs : s₁ = s₂) (hfg : ∀a∈s₂, f a = g a) :
+  s₁.sup f = s₂.sup g :=
 by subst hs; exact finset.fold_congr hfg
 
 @[simp] lemma sup_le_iff {a : α} : s.sup f ≤ a ↔ (∀b ∈ s, f b ≤ a) :=
@@ -65,10 +66,6 @@ end
 @[simp] lemma sup_bUnion [decidable_eq β] (s : finset γ) (t : γ → finset β) :
   (s.bUnion t).sup f = s.sup (λ x, (t x).sup f) :=
 eq_of_forall_ge_iff $ λ c, by simp [@forall_swap _ β]
-
-@[congr] lemma sup_congr {g : β → α} (hs : s₁ = s₂) (h : ∀ x ∈ s₁, f x = g x) :
-  s₁.sup f = s₂.sup g :=
-by { subst s₁, refine eq_of_forall_ge_iff (λ c, _), simp [h] { contextual := tt } }
 
 lemma sup_const {s : finset β} (h : s.nonempty) (c : α) : s.sup (λ _, c) = c :=
 eq_of_forall_ge_iff $ λ b, sup_le_iff.trans h.forall_const
@@ -218,7 +215,8 @@ inf_singleton
 lemma inf_union [decidable_eq β] : (s₁ ∪ s₂).inf f = s₁.inf f ⊓ s₂.inf f :=
 @sup_union (order_dual α) _ _ _ _ _ _
 
-theorem inf_congr {f g : β → α} (hs : s₁ = s₂) (hfg : ∀a∈s₂, f a = g a) : s₁.inf f = s₂.inf g :=
+@[congr] theorem inf_congr {f g : β → α} (hs : s₁ = s₂) (hfg : ∀a∈s₂, f a = g a) :
+  s₁.inf f = s₂.inf g :=
 by subst hs; exact finset.fold_congr hfg
 
 lemma le_inf_iff {a : α} : a ≤ s.inf f ↔ ∀ b ∈ s, a ≤ f b :=
