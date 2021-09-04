@@ -6,7 +6,7 @@ Authors: Jeremy Avigad, Leonardo de Moura, Mario Carneiro, Johannes Hölzl
 import algebra.ordered_monoid
 import order.rel_iso
 import order.order_dual
-import abs
+import algebra.abs
 
 /-!
 # Ordered groups
