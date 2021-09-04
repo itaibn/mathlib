@@ -24,4 +24,6 @@ absolute
 Absolute value is a unary operator with properties similar to the absolute value of a real number.
 -/
 class has_abs (α : Type*) := (abs : α → α)
-notation `|`a`|` := has_abs.abs a
+export has_abs (abs)
+
+notation `|`a`|` := abs a
