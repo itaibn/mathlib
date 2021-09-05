@@ -91,7 +91,7 @@ theorem continuous_of_rat : continuous (coe : ℚ → ℝ) := uniform_continuous
 
 theorem real.uniform_continuous_add : uniform_continuous (λp : ℝ × ℝ, p.1 + p.2) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
-let ⟨δ, δ0, Hδ⟩ := rat_add_continuous_lemma has_abs.abs ε0 in
+let ⟨δ, δ0, Hδ⟩ := rat_add_continuous_lemma abs ε0 in
 ⟨δ, δ0, λ a b h, let ⟨h₁, h₂⟩ := max_lt_iff.1 h in Hδ h₁ h₂⟩
 
 -- TODO(Mario): Find a way to use rat_add_continuous_lemma
@@ -152,14 +152,14 @@ by simp [mem_closure_iff_nhds_basis nhds_basis_ball, real.dist_eq]
 lemma real.uniform_continuous_inv (s : set ℝ) {r : ℝ} (r0 : 0 < r) (H : ∀ x ∈ s, r ≤ |x|) :
   uniform_continuous (λp:s, p.1⁻¹) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
-let ⟨δ, δ0, Hδ⟩ := rat_inv_continuous_lemma has_abs.abs ε0 r0 in
+let ⟨δ, δ0, Hδ⟩ := rat_inv_continuous_lemma abs ε0 r0 in
 ⟨δ, δ0, λ a b h, Hδ (H _ a.2) (H _ b.2) h⟩
 
-lemma real.uniform_continuous_abs : uniform_continuous (has_abs.abs : ℝ → ℝ) :=
+lemma real.uniform_continuous_abs : uniform_continuous (abs : ℝ → ℝ) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
   ⟨ε, ε0, λ a b, lt_of_le_of_lt (abs_abs_sub_abs_le_abs_sub _ _)⟩
 
-lemma rat.uniform_continuous_abs : uniform_continuous (has_abs.abs : ℚ → ℚ) :=
+lemma rat.uniform_continuous_abs : uniform_continuous (abs : ℚ → ℚ) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
   ⟨ε, ε0, λ a b h, lt_of_le_of_lt
     (by simpa [rat.dist_eq] using abs_abs_sub_abs_le_abs_sub _ _) h⟩
@@ -192,7 +192,7 @@ lemma real.uniform_continuous_mul (s : set (ℝ × ℝ))
   {r₁ r₂ : ℝ} (H : ∀ x ∈ s, |(x : ℝ × ℝ).1| < r₁ ∧ |x.2| < r₂) :
   uniform_continuous (λp:s, p.1.1 * p.1.2) :=
 metric.uniform_continuous_iff.2 $ λ ε ε0,
-let ⟨δ, δ0, Hδ⟩ := rat_mul_continuous_lemma has_abs.abs ε0 in
+let ⟨δ, δ0, Hδ⟩ := rat_mul_continuous_lemma abs ε0 in
 ⟨δ, δ0, λ a b h,
   let ⟨h₁, h₂⟩ := max_lt_iff.1 h in Hδ (H _ a.2).1 (H _ b.2).2 h₁ h₂⟩
 
@@ -231,7 +231,7 @@ instance : complete_space ℝ :=
 begin
   apply complete_of_cauchy_seq_tendsto,
   intros u hu,
-  let c : cau_seq ℝ has_abs.abs := ⟨u, metric.cauchy_seq_iff'.1 hu⟩,
+  let c : cau_seq ℝ abs := ⟨u, metric.cauchy_seq_iff'.1 hu⟩,
   refine ⟨c.lim, λ s h, _⟩,
   rcases metric.mem_nhds_iff.1 h with ⟨ε, ε0, hε⟩,
   have := c.equiv_lim ε ε0,
@@ -257,7 +257,7 @@ subset.antisymm
 λ x hx, mem_closure_iff_nhds.2 $ λ t ht,
 let ⟨ε, ε0, hε⟩ := metric.mem_nhds_iff.1 ht in
 let ⟨p, h₁, h₂⟩ := exists_rat_btwn ((lt_add_iff_pos_right x).2 ε0) in
-⟨_, hε (show has_abs.abs _ < _,
+⟨_, hε (show abs _ < _,
     by rwa [abs_of_nonneg (le_of_lt $ sub_pos.2 h₁), sub_lt_iff_lt_add']),
   p, rat.cast_lt.1 (@lt_of_le_of_lt ℝ _ _ _ _ hx h₁), rfl⟩
 

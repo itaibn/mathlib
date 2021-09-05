@@ -86,7 +86,7 @@ begin
 end
 
 lemma abs_tendsto_at_top (hdeg : 1 ≤ P.degree) :
-  tendsto (λ x, has_abs.abs $ eval x P) at_top at_top :=
+  tendsto (λ x, abs $ eval x P) at_top at_top :=
 begin
   by_cases hP : 0 ≤ P.leading_coeff,
   { exact tendsto_abs_at_top_at_top.comp (P.tendsto_at_top_of_leading_coeff_nonneg hdeg hP)},
@@ -98,7 +98,7 @@ lemma abs_is_bounded_under_iff :
   is_bounded_under (≤) at_top (λ x, |eval x P|) ↔ P.degree ≤ 0 :=
 begin
   refine ⟨λ h, _, λ h, ⟨|P.coeff 0|, eventually_map.mpr (eventually_of_forall
-    (forall_imp (λ _, le_of_eq) (λ x, congr_arg has_abs.abs $ trans (congr_arg (eval x)
+    (forall_imp (λ _, le_of_eq) (λ x, congr_arg abs $ trans (congr_arg (eval x)
     (eq_C_of_degree_le_zero h)) (eval_C))))⟩⟩,
   contrapose! h,
   exact not_is_bounded_under_of_tendsto_at_top
@@ -106,7 +106,7 @@ begin
 end
 
 lemma abs_tendsto_at_top_iff :
-  tendsto (λ x, has_abs.abs $ eval x P) at_top at_top ↔ 1 ≤ P.degree :=
+  tendsto (λ x, abs $ eval x P) at_top at_top ↔ 1 ≤ P.degree :=
 ⟨λ h, nat.with_bot.one_le_iff_zero_lt.2 (not_le.mp ((mt (abs_is_bounded_under_iff P).mpr)
   (not_is_bounded_under_of_tendsto_at_top h))), abs_tendsto_at_top P⟩
 

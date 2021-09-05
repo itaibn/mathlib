@@ -1151,7 +1151,7 @@ begin
   { apply nnreal.coe_eq.1,
     rw [nnreal.sub_eq_zero h, max_eq_right (zero_le $ b - a), ← dist_nndist, nnreal.dist_eq,
       nnreal.coe_sub h ],
-    unfold has_abs.abs,
+    unfold abs,
     rw neg_sub,
     apply max_eq_right,
     linarith [nnreal.coe_le_coe.2 h] },

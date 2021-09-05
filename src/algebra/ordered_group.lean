@@ -1009,7 +1009,7 @@ section add_group
 variables [add_group α] [linear_order α]
 
 @[simp] lemma abs_neg (a : α) : | -a| = |a| :=
-begin unfold has_abs.abs, rw [max_comm, neg_neg] end
+begin unfold abs, rw [max_comm, neg_neg] end
 
 lemma eq_or_eq_neg_of_abs_eq {a b : α} (h : |a| = b) : a = b ∨ a = -b :=
 by simpa only [← h, eq_comm, eq_neg_iff_eq_neg] using abs_choice a

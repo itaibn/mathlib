@@ -84,11 +84,11 @@ namespace real
 
 /-- An auxiliary sequence of rational numbers that converges to `real.sqrt (mk f)`.
 Currently this sequence is not used in `mathlib`.  -/
-def sqrt_aux (f : cau_seq ℚ has_abs.abs) : ℕ → ℚ
+def sqrt_aux (f : cau_seq ℚ abs) : ℕ → ℚ
 | 0       := rat.mk_nat (f 0).num.to_nat.sqrt (f 0).denom.sqrt
 | (n + 1) := let s := sqrt_aux n in max 0 $ (s + f (n+1) / s) / 2
 
-theorem sqrt_aux_nonneg (f : cau_seq ℚ has_abs.abs) : ∀ i : ℕ, 0 ≤ sqrt_aux f i
+theorem sqrt_aux_nonneg (f : cau_seq ℚ abs) : ∀ i : ℕ, 0 ≤ sqrt_aux f i
 | 0       := by rw [sqrt_aux, rat.mk_nat_eq, rat.mk_eq_div];
   apply div_nonneg; exact int.cast_nonneg.2 (int.of_nat_nonneg _)
 | (n + 1) := le_max_left _ _

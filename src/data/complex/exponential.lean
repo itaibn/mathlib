@@ -39,7 +39,7 @@ variables {α : Type*} {β : Type*} [ring β]
   [linear_ordered_field α] [archimedean α] {abv : β → α} [is_absolute_value abv]
 
 lemma is_cau_of_decreasing_bounded (f : ℕ → α) {a : α} {m : ℕ} (ham : ∀ n ≥ m, |f n| ≤ a)
-  (hnm : ∀ n ≥ m, f n.succ ≤ f n) : is_cau_seq has_abs.abs f :=
+  (hnm : ∀ n ≥ m, f n.succ ≤ f n) : is_cau_seq abs f :=
 λ ε ε0,
 let ⟨k, hk⟩ := archimedean.arch a ε0 in
 have h : ∃ l, ∀ n ≥ m, a - l • ε < f n :=
@@ -71,11 +71,11 @@ begin
 end
 
 lemma is_cau_of_mono_bounded (f : ℕ → α) {a : α} {m : ℕ} (ham : ∀ n ≥ m, |f n| ≤ a)
-  (hnm : ∀ n ≥ m, f n ≤ f n.succ) : is_cau_seq has_abs.abs f :=
+  (hnm : ∀ n ≥ m, f n ≤ f n.succ) : is_cau_seq abs f :=
 begin
-  refine @eq.rec_on (ℕ → α) _ (is_cau_seq has_abs.abs) _ _
+  refine @eq.rec_on (ℕ → α) _ (is_cau_seq abs) _ _
     (-⟨_, @is_cau_of_decreasing_bounded _ _ _ (λ n, -f n) a m (by simpa) (by simpa)⟩ :
-      cau_seq α has_abs.abs).2,
+      cau_seq α abs).2,
   ext,
   exact neg_neg _
 end
@@ -88,7 +88,7 @@ variables {α : Type*} {β : Type*} [ring β]
 
 lemma is_cau_series_of_abv_le_cau {f : ℕ → β} {g : ℕ → α} (n : ℕ) :
   (∀ m, n ≤ m → abv (f m) ≤ g m) →
-  is_cau_seq has_abs.abs (λ n, ∑ i in range n, g i) →
+  is_cau_seq abs (λ n, ∑ i in range n, g i) →
   is_cau_seq abv (λ n, ∑ i in range n, f i) :=
 begin
   assume hm hg ε ε0,
@@ -115,7 +115,7 @@ begin
     exact add_le_add (hm _ (le_add_of_nonneg_of_le (nat.zero_le _) (le_max_left _ _))) hi },
 end
 
-lemma is_cau_series_of_abv_cau {f : ℕ → β} : is_cau_seq has_abs.abs (λ m, ∑ n in range m, abv (f n))
+lemma is_cau_series_of_abv_cau {f : ℕ → β} : is_cau_seq abs (λ m, ∑ n in range m, abv (f n))
   → is_cau_seq abv (λ m, ∑ n in range m, f n) :=
 is_cau_series_of_abv_le_cau 0 (λ n h, le_refl _)
 
@@ -153,9 +153,9 @@ begin
 end
 
 lemma is_cau_geo_series_const (a : α) {x : α} (hx1 : |x| < 1) :
-  is_cau_seq has_abs.abs (λ m, ∑ n in range m, a * x ^ n) :=
-have is_cau_seq has_abs.abs (λ m, a * ∑ n in range m, x ^ n) :=
-  (cau_seq.const has_abs.abs a * ⟨_, is_cau_geo_series x hx1⟩).2,
+  is_cau_seq abs (λ m, ∑ n in range m, a * x ^ n) :=
+have is_cau_seq abs (λ m, a * ∑ n in range m, x ^ n) :=
+  (cau_seq.const abs a * ⟨_, is_cau_geo_series x hx1⟩).2,
 by simpa only [mul_sum]
 
 lemma series_ratio_test {f : ℕ → β} (n : ℕ) (r : α)
@@ -237,7 +237,7 @@ finset.induction_on s (by simp [abv_zero abv])
     exact le_trans (abv_add abv _ _) (add_le_add_left ih _))
 
 lemma cauchy_product {a b : ℕ → β}
-  (ha : is_cau_seq has_abs.abs (λ m, ∑ n in range m, abv (a n)))
+  (ha : is_cau_seq abs (λ m, ∑ n in range m, abv (a n)))
   (hb : is_cau_seq abv (λ m, ∑ n in range m, b n)) (ε : α) (ε0 : 0 < ε) :
   ∃ i : ℕ, ∀ j ≥ i, abv ((∑ k in range j, a k) * (∑ k in range j, b k) -
   ∑ n in range j, ∑ m in range (n + 1), a m * b (n - m)) < ε :=
@@ -329,7 +329,7 @@ open cau_seq
 
 namespace complex
 
-lemma is_cau_abs_exp (z : ℂ) : is_cau_seq has_abs.abs
+lemma is_cau_abs_exp (z : ℂ) : is_cau_seq abs
   (λ n, ∑ m in range n, abs (z ^ m / m!)) :=
 let ⟨n, hn⟩ := exists_nat_gt (abs z) in
 have hn0 : (0 : ℝ) < n, from lt_of_le_of_lt (abs_nonneg _) hn,
@@ -1145,7 +1145,7 @@ open is_absolute_value
 
 /- TODO make this private and prove ∀ x -/
 lemma add_one_le_exp_of_nonneg {x : ℝ} (hx : 0 ≤ x) : x + 1 ≤ exp x :=
-calc x + 1 ≤ lim (⟨(λ n : ℕ, ((exp' x) n).re), is_cau_seq_re (exp' x)⟩ : cau_seq ℝ has_abs.abs) :
+calc x + 1 ≤ lim (⟨(λ n : ℕ, ((exp' x) n).re), is_cau_seq_re (exp' x)⟩ : cau_seq ℝ abs) :
   le_lim (cau_seq.le_of_exists ⟨2,
     λ j hj, show x + (1 : ℝ) ≤ (∑ m in range j, (x ^ m / m! : ℂ)).re,
       from have h₁ : (((λ m : ℕ, (x ^ m / m! : ℂ)) ∘ nat.succ) 0).re = x, by simp,

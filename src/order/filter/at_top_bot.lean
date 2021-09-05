@@ -610,11 +610,11 @@ section linear_ordered_add_comm_group
 variables [linear_ordered_add_comm_group α]
 
 /-- $\lim_{x\to+\infty}|x|=+\infty$ -/
-lemma tendsto_abs_at_top_at_top : tendsto (has_abs.abs : α → α) at_top at_top :=
+lemma tendsto_abs_at_top_at_top : tendsto (abs : α → α) at_top at_top :=
 tendsto_at_top_mono le_abs_self tendsto_id
 
 /-- $\lim_{x\to-\infty}|x|=+\infty$ -/
-lemma tendsto_abs_at_bot_at_top : tendsto (has_abs.abs : α → α) at_bot at_top :=
+lemma tendsto_abs_at_bot_at_top : tendsto (abs : α → α) at_bot at_top :=
 tendsto_at_top_mono neg_le_abs_self tendsto_neg_at_bot_at_top
 
 end linear_ordered_add_comm_group

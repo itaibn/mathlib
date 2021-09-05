@@ -292,7 +292,7 @@ lemma abs_add_eq_add_abs_iff {α : Type*} [linear_ordered_add_comm_group α] (a 
 begin
   by_cases ab : a ≤ b,
   { exact abs_add_eq_add_abs_le ab },
-  { rw [add_comm a, add_comm (has_abs.abs _), abs_add_eq_add_abs_le ((not_le.mp ab).le), and.comm,
+  { rw [add_comm a, add_comm (abs _), abs_add_eq_add_abs_le ((not_le.mp ab).le), and.comm,
     @and.comm (b ≤ 0 ) _] }
 end
 

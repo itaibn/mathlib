@@ -949,7 +949,7 @@ begin
 end
 
 /-- `abs` as a `monoid_with_zero_hom`. -/
-def abs_hom : monoid_with_zero_hom α α := ⟨has_abs.abs, abs_zero, abs_one, abs_mul⟩
+def abs_hom : monoid_with_zero_hom α α := ⟨abs, abs_zero, abs_one, abs_mul⟩
 
 @[simp] lemma abs_mul_abs_self (a : α) : |a| * |a| = a * a :=
 abs_by_cases (λ x, x * x = a * a) rfl (neg_mul_neg a a)
@@ -997,9 +997,9 @@ calc a < -a ↔ -(-a) < -a : by rw neg_neg
 ... ↔ 0 < -a : neg_lt_self_iff
 ... ↔ a < 0 : neg_pos
 
-@[simp] lemma abs_eq_self : |a| = a ↔ 0 ≤ a := by simp [has_abs.abs]
+@[simp] lemma abs_eq_self : |a| = a ↔ 0 ≤ a := by simp [abs]
 
-@[simp] lemma abs_eq_neg_self : |a| = -a ↔ a ≤ 0 := by simp [has_abs.abs]
+@[simp] lemma abs_eq_neg_self : |a| = -a ↔ a ≤ 0 := by simp [abs]
 
 /-- For an element `a` of a linear ordered ring, either `abs a = a` and `0 ≤ a`,
     or `abs a = -a` and `a < 0`.

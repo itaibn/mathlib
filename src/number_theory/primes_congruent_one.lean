@@ -23,14 +23,14 @@ open polynomial nat filter
 lemma exists_prime_ge_modeq_one (k n : ℕ) (hpos : 0 < k) :
   ∃ (p : ℕ), nat.prime p ∧ n ≤ p ∧ p ≡ 1 [MOD k] :=
 begin
-  have hli : tendsto (has_abs.abs ∘ (λ (a : ℕ), |(a : ℚ)|)) at_top at_top,
+  have hli : tendsto (abs ∘ (λ (a : ℕ), |(a : ℚ)|)) at_top at_top,
   { simp only [(∘), abs_cast],
     exact nat.strict_mono_cast.monotone.tendsto_at_top_at_top exists_nat_ge },
   have hcff : int.cast_ring_hom ℚ (cyclotomic k ℤ).leading_coeff ≠ 0,
   { simp only [cyclotomic.monic, ring_hom.eq_int_cast, monic.leading_coeff, int.cast_one, ne.def,
      not_false_iff, one_ne_zero] },
   obtain ⟨a, ha⟩ := tendsto_at_top_at_top.1 (tendsto_abv_eval₂_at_top (int.cast_ring_hom ℚ)
-    has_abs.abs (cyclotomic k ℤ) (degree_cyclotomic_pos k ℤ hpos) hcff hli) 2,
+    abs (cyclotomic k ℤ) (degree_cyclotomic_pos k ℤ hpos) hcff hli) 2,
   let b := a * (k * n.factorial),
   have hgt : 1 < (eval ↑(a * (k * n.factorial)) (cyclotomic k ℤ)).nat_abs,
   { suffices hgtabs : 1 < |eval ↑b (cyclotomic k ℤ)|,

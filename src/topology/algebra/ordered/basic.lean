@@ -1601,7 +1601,7 @@ instance linear_ordered_add_comm_group.topological_add_group : topological_add_g
       (eventually_abs_sub_lt a ε0).mono $ λ x hx, by rwa [neg_sub_neg, abs_sub_comm] }
 
 @[continuity]
-lemma continuous_abs : continuous (has_abs.abs : α → α) := continuous_id.max continuous_neg
+lemma continuous_abs : continuous (abs : α → α) := continuous_id.max continuous_neg
 
 lemma filter.tendsto.abs {f : β → α} {a : α} {l : filter β} (h : tendsto f l (𝓝 a)) :
   tendsto (λ x, |f x|) l (𝓝 (|a|)) :=
@@ -1663,7 +1663,7 @@ lemma continuous_within_at.abs (h : continuous_within_at f s b) :
 lemma continuous_on.abs (h : continuous_on f s) : continuous_on (λ x, |f x|) s :=
 λ x hx, (h x hx).abs
 
-lemma tendsto_abs_nhds_within_zero : tendsto (has_abs.abs : α → α) (𝓝[{0}ᶜ] 0) (𝓝[Ioi 0] 0) :=
+lemma tendsto_abs_nhds_within_zero : tendsto (abs : α → α) (𝓝[{0}ᶜ] 0) (𝓝[Ioi 0] 0) :=
 (continuous_abs.tendsto' (0 : α) 0 abs_zero).inf $ tendsto_principal_principal.2 $ λ x, abs_pos.2
 
 end
@@ -1744,7 +1744,7 @@ begin
   refine ⟨λ h, _, λ h, _⟩,
   { obtain ⟨i, hi, hit⟩ := h,
     refine ⟨i / (|x₀|), div_pos hi (abs_pos.2 hx₀), λ x hx, hit _⟩,
-    calc |x₀ * x - x₀| = |x₀ * (x - 1)| : congr_arg has_abs.abs (by ring_nf)
+    calc |x₀ * x - x₀| = |x₀ * (x - 1)| : congr_arg abs (by ring_nf)
       ... = |x₀| * |x - 1| : abs_mul x₀ (x - 1)
       ... < |x₀| * (i / |x₀|) : mul_lt_mul' le_rfl hx (abs_nonneg (x - 1)) (abs_pos.2 hx₀)
       ... = |x₀| * i / |x₀| : by ring
@@ -1753,7 +1753,7 @@ begin
     refine ⟨i * |x₀|, mul_pos hi (abs_pos.2 hx₀), λ x hx, _⟩,
     have : |x / x₀ - 1| < i,
     calc |x / x₀ - 1| = |x / x₀ - x₀ / x₀| : (by rw div_self hx₀)
-    ... = |(x - x₀) / x₀| : congr_arg has_abs.abs (sub_div x x₀ x₀).symm
+    ... = |(x - x₀) / x₀| : congr_arg abs (sub_div x x₀ x₀).symm
     ... = |x - x₀| / |x₀| : abs_div (x - x₀) x₀
     ... < i * |x₀| / |x₀| : div_lt_div hx le_rfl
       (mul_nonneg (le_of_lt hi) (abs_nonneg x₀)) (abs_pos.2 hx₀)

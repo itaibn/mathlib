@@ -187,7 +187,7 @@ monotone.map_max cast_mono
 
 @[simp, norm_cast] theorem cast_abs [linear_ordered_ring α] {q : ℤ} :
   ((|q| : ℤ) : α) = |q| :=
-by simp [has_abs.abs]
+by simp [abs]
 
 lemma cast_nat_abs {R : Type*} [linear_ordered_ring R] : ∀ (n : ℤ), (n.nat_abs : R) = |n|
 | (n : ℕ) := by simp only [int.nat_abs_of_nat, int.cast_coe_nat, nat.abs_cast]
