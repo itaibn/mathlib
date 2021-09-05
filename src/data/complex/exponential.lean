@@ -329,7 +329,7 @@ open cau_seq
 
 namespace complex
 
-lemma is_cau_abs_exp (z : ℂ) : is_cau_seq abs
+lemma is_cau_abs_exp (z : ℂ) : is_cau_seq has_abs.abs
   (λ n, ∑ m in range n, abs (z ^ m / m!)) :=
 let ⟨n, hn⟩ := exists_nat_gt (abs z) in
 have hn0 : (0 : ℝ) < n, from lt_of_le_of_lt (abs_nonneg _) hn,
@@ -1145,7 +1145,7 @@ open is_absolute_value
 
 /- TODO make this private and prove ∀ x -/
 lemma add_one_le_exp_of_nonneg {x : ℝ} (hx : 0 ≤ x) : x + 1 ≤ exp x :=
-calc x + 1 ≤ lim (⟨(λ n : ℕ, ((exp' x) n).re), is_cau_seq_re (exp' x)⟩ : cau_seq ℝ abs) :
+calc x + 1 ≤ lim (⟨(λ n : ℕ, ((exp' x) n).re), is_cau_seq_re (exp' x)⟩ : cau_seq ℝ has_abs.abs) :
   le_lim (cau_seq.le_of_exists ⟨2,
     λ j hj, show x + (1 : ℝ) ≤ (∑ m in range j, (x ^ m / m! : ℂ)).re,
       from have h₁ : (((λ m : ℕ, (x ^ m / m! : ℂ)) ∘ nat.succ) 0).re = x, by simp,

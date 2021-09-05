@@ -417,6 +417,8 @@ by simp only [sub_conj, of_real_mul, of_real_one, of_real_bit0, mul_right_comm,
 /-- The complex absolute value function, defined as the square root of the norm squared. -/
 @[pp_nodot] noncomputable def abs (z : ℂ) : ℝ := (norm_sq z).sqrt
 
+local notation `abs'` := has_abs.abs
+
 @[simp, norm_cast] lemma abs_of_real (r : ℝ) : abs r = |r| :=
 by simp [abs, norm_sq_of_real, real.sqrt_mul_self_eq_abs]
 
@@ -670,24 +672,24 @@ end complex_order
 
 /-! ### Cauchy sequences -/
 
-theorem is_cau_seq_re (f : cau_seq ℂ abs) : is_cau_seq abs (λ n, (f n).re) :=
+theorem is_cau_seq_re (f : cau_seq ℂ abs) : is_cau_seq abs' (λ n, (f n).re) :=
 λ ε ε0, (f.cauchy ε0).imp $ λ i H j ij,
 lt_of_le_of_lt (by simpa using abs_re_le_abs (f j - f i)) (H _ ij)
 
-theorem is_cau_seq_im (f : cau_seq ℂ abs) : is_cau_seq abs (λ n, (f n).im) :=
+theorem is_cau_seq_im (f : cau_seq ℂ abs) : is_cau_seq abs' (λ n, (f n).im) :=
 λ ε ε0, (f.cauchy ε0).imp $ λ i H j ij,
 lt_of_le_of_lt (by simpa using abs_im_le_abs (f j - f i)) (H _ ij)
 
 /-- The real part of a complex Cauchy sequence, as a real Cauchy sequence. -/
-noncomputable def cau_seq_re (f : cau_seq ℂ abs) : cau_seq ℝ abs :=
+noncomputable def cau_seq_re (f : cau_seq ℂ abs) : cau_seq ℝ abs' :=
 ⟨_, is_cau_seq_re f⟩
 
 /-- The imaginary part of a complex Cauchy sequence, as a real Cauchy sequence. -/
-noncomputable def cau_seq_im (f : cau_seq ℂ abs) : cau_seq ℝ abs :=
+noncomputable def cau_seq_im (f : cau_seq ℂ abs) : cau_seq ℝ abs' :=
 ⟨_, is_cau_seq_im f⟩
 
 lemma is_cau_seq_abs {f : ℕ → ℂ} (hf : is_cau_seq abs f) :
-  is_cau_seq abs (abs ∘ f) :=
+  is_cau_seq abs' (abs ∘ f) :=
 λ ε ε0, let ⟨i, hi⟩ := hf ε ε0 in
 ⟨i, λ j hj, lt_of_le_of_lt (abs_abs_sub_le_abs_sub _ _) (hi j hj)⟩
 
@@ -738,7 +740,7 @@ complex.ext (by simp [cau_seq_conj, (lim_re _).symm, cau_seq_re])
   (by simp [cau_seq_conj, (lim_im _).symm, cau_seq_im, (lim_neg _).symm]; refl)
 
 /-- The absolute value of a complex Cauchy sequence, as a real Cauchy sequence. -/
-noncomputable def cau_seq_abs (f : cau_seq ℂ abs) : cau_seq ℝ abs :=
+noncomputable def cau_seq_abs (f : cau_seq ℂ abs) : cau_seq ℝ abs' :=
 ⟨_, is_cau_seq_abs f.2⟩
 
 lemma lim_abs (f : cau_seq ℂ abs) : lim (cau_seq_abs f) = abs (lim f) :=
