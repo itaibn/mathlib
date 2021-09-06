@@ -455,12 +455,10 @@ by rw [h, div_eq_mul_inv, mul_comm, inv_mul_cancel_left]
 lemma mul_div_cancel'_right (a b : G) : a * (b / a) = b :=
 by rw [div_eq_mul_inv, mul_left_comm, mul_inv_self, mul_one]
 
-@[to_additive sub_add_sub]
-lemma div_mul_div' (a b c d : G) : (a / b) * (c / d) = (a * c) / (b * d) :=
-begin
-  refine (div_eq_of_eq_mul' _).symm,
-  rw [mul_assoc, mul_left_comm d, ← mul_assoc b, mul_div_cancel'_right, mul_div_cancel'_right]
-end
+@[to_additive]
+lemma div_mul_comm (a b c d : G) : a / b * (c / d) = a * c / (b * d) :=
+by rw [div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv, mul_inv_rev, mul_assoc, mul_assoc,
+  mul_left_cancel_iff, mul_comm, mul_assoc]
 
 end comm_group
 
