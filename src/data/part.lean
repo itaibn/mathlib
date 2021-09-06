@@ -89,31 +89,26 @@ theorem eq_some_iff {a : α} {o : part α} : o = some a ↔ a ∈ o :=
  λ ⟨h, e⟩, e ▸ ext' (iff_true_intro h) (λ _ _, rfl)⟩
 
 theorem eq_none_iff {o : part α} : o = none ↔ ∀ a, a ∉ o :=
-⟨λ e, e.symm ▸ not_mem_none,
- λ h, ext (by simpa [not_mem_none])⟩
+⟨λ e, e.symm ▸ not_mem_none, λ h, ext (by simpa)⟩
 
 theorem eq_none_iff' {o : part α} : o = none ↔ ¬ o.dom :=
 ⟨λ e, e.symm ▸ id, λ h, eq_none_iff.2 (λ a h', h h'.fst)⟩
 
-lemma some_ne_none (x : α) : some x ≠ none :=
+@[simp] lemma some_ne_none (x : α) : some x ≠ none :=
 by { intro h, change none.dom, rw [← h], trivial }
+
+@[simp] lemma none_ne_some (x : α) : none ≠ some x :=
+(some_ne_none x).symm
 
 lemma ne_none_iff {o : part α} : o ≠ none ↔ ∃x, o = some x :=
 begin
   split,
-  { rw [ne, eq_none_iff], intro h, push_neg at h, cases h with x hx, use x, rwa [eq_some_iff] },
+  { rw [ne, eq_none_iff', not_not], exact λ h, ⟨o.get h, eq_some_iff.2 (get_mem h)⟩ },
   { rintro ⟨x, rfl⟩, apply some_ne_none }
 end
 
 lemma eq_none_or_eq_some (o : part α) : o = none ∨ ∃ x, o = some x :=
-begin
-  classical,
-  by_cases h : o.dom,
-  { rw dom_iff_mem at h, right,
-    apply exists_imp_exists _ h,
-    simp [eq_some_iff] },
-  { rw eq_none_iff', exact or.inl h },
-end
+or_iff_not_imp_left.2 ne_none_iff.1
 
 @[simp] lemma some_inj {a b : α} : part.some a = some b ↔ a = b :=
 function.injective.eq_iff (λ a b h, congr_fun (eq_of_heq (part.mk.inj h).2) trivial)
@@ -135,6 +130,13 @@ lemma get_eq_iff_mem {o : part α} {a : α} (h : o.dom) : o.get h = a ↔ a ∈ 
 
 lemma eq_get_iff_mem {o : part α} {a : α} (h : o.dom) : a = o.get h ↔ a ∈ o :=
 eq_comm.trans (get_eq_iff_mem h)
+
+@[simp] lemma none_to_option [decidable (@none α).dom] : (none : part α).to_option = option.none :=
+dif_neg id
+
+@[simp] lemma some_to_option (a : α) [decidable (some a).dom] :
+  (some a).to_option = option.some a :=
+dif_pos trivial
 
 instance none_decidable : decidable (@none α).dom := decidable.false
 instance some_decidable (a : α) : decidable (some a).dom := decidable.true
@@ -304,6 +306,10 @@ theorem mem_bind {f : part α} {g : α → part β} :
 
 @[simp] theorem bind_some (a : α) (f : α → part β) :
   (some a).bind f = f a := ext $ by simp
+
+theorem bind_of_mem {o : part α} {a : α} (h : a ∈ o) (f : α → part β) :
+  o.bind f = f a :=
+by rw [eq_some_iff.2 h, bind_some]
 
 theorem bind_some_eq_map (f : α → β) (x : part α) :
   x.bind (some ∘ f) = map f x :=

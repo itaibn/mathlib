@@ -91,6 +91,7 @@ set.ext $ λ x, mem_univ_Ioc.symm
 lemma exists_mem : ∃ x, x ∈ I := ⟨_, I.upper_mem⟩
 lemma nonempty_coe : set.nonempty (I : set (ι → ℝ)) := I.exists_mem
 @[simp] lemma coe_ne_empty : (I : set (ι → ℝ)) ≠ ∅ := I.nonempty_coe.ne_empty
+@[simp] lemma empty_ne_coe : ∅ ≠ (I : set (ι → ℝ)) := I.coe_ne_empty.symm
 
 instance : has_le (box ι) := ⟨λ I J, ∀ ⦃x⦄, x ∈ I → x ∈ J⟩
 
@@ -153,6 +154,16 @@ lemma monotone_lower : monotone (λ I : box ι, order_dual.to_dual I.lower) :=
 
 lemma monotone_upper : monotone (λ I : box ι, I.upper) :=
 λ I J H, (le_iff_bounds.1 H).2
+
+lemma coe_subset_Icc : ↑I ⊆ I.Icc := λ x hx, ⟨λ i, (hx i).1.le, λ i, (hx i).2⟩
+
+lemma part_eq_part {o₁ o₂ : part (box ι)} :
+  o₁ = o₂ ↔ (⋃ J ∈ o₁, ↑J : set (ι → ℝ)) = (⋃ J ∈ o₂, ↑J : set (ι → ℝ)) :=
+begin
+  refine ⟨λ h, h ▸ rfl, λ h, _⟩,
+  rcases ⟨o₁.eq_none_or_eq_some, o₂.eq_none_or_eq_some⟩ with ⟨rfl|⟨I₁, rfl⟩, rfl|⟨I₂, rfl⟩⟩;
+    try { refl }; simpa using h
+end
 
 /-!
 ### Intersection of two boxes
@@ -240,12 +251,11 @@ instance : semilattice_sup (box ι) :=
     sup_le (monotone_upper h₁) (monotone_upper h₂)⟩,
   .. box.partial_order, .. box.has_sup }
 
-/-- `comap f I` is the box with corners `I.lower ∘ f` and `I.upper ∘ f`. Note that this definition
-ignores the values of `I.lower and `I.upper` outside of `range f`. -/
-@[simps] def comap {ι' : Type*} (f : ι → ι') : box ι' →ₘ box ι :=
-{ to_fun := λ I, ⟨I.lower ∘ f, I.upper ∘ f, λ i, I.lower_lt_upper (f i)⟩,
-  monotone' := λ I J Hle x hx i,
-    Ioc_subset_Ioc ((le_iff_bounds.1 Hle).1 _) ((le_iff_bounds.1 Hle).2 _) (hx _) }
+@[simps] def face (I : box ι) (i : ι) : box ({i}ᶜ : set ι) :=
+⟨I.lower ∘ coe, I.upper ∘ coe, λ j, I.lower_lt_upper j⟩
+
+@[mono] lemma face_mono (h : I ≤ J) (i : ι) : face I i ≤ face J i :=
+λ x hx i, Ioc_subset_Ioc ((le_iff_bounds.1 h).1 _) ((le_iff_bounds.1 h).2 _) (hx _)
 
 section distortion
 

@@ -106,12 +106,52 @@ begin
     (λ x hx, h0 x (box.le_iff_Icc.1 (π.le_of_mem hJ) hx)),
   choose! πi πip πiH πir hsub πid, clear hsub,
   refine ⟨π.bUnion_tagged πi, bUnion_le _ _, is_Henstock_bUnion_tagged.2 πiH,
-    is_subordinate_bUnion_tagged.2 πir, _, _⟩,
-  { rw [distortion_bUnion_tagged],
-    exact sup_congr rfl πid },
-  { rw [Union_bUnion_tagged, Union_def],
-    exact Union_congr id surjective_id
-      (λ J, Union_congr id surjective_id $ λ hJ, (πip _ hJ).Union_eq) }
+    is_subordinate_bUnion_tagged.2 πir, _, π.Union_bUnion_partition πip⟩,
+  rw [distortion_bUnion_tagged],
+  exact sup_congr rfl πid
+end
+
+def to_subordinate (π : prepartition I) (r : (ι → ℝ) → ℝ) : tagged_prepartition I :=
+if h : ∀ x ∈ I.Icc, 0 < r x then (π.exists_tagged_le_is_Henstock_is_subordinate_Union_eq h).some
+else π.bUnion_tagged (λ J, tagged_prepartition.single J J le_rfl J.upper J.upper_mem_Icc)
+
+lemma to_subordinate_to_prepartition_le (π : prepartition I) (r : (ι → ℝ) → ℝ) :
+  (π.to_subordinate r).to_prepartition ≤ π :=
+begin
+  rw to_subordinate, split_ifs with hr,
+  exacts [(π.exists_tagged_le_is_Henstock_is_subordinate_Union_eq hr).some_spec.1, bUnion_le _ _]
+end
+
+lemma is_Henstock_to_subordinate (π : prepartition I) (r : (ι → ℝ) → ℝ) :
+  (π.to_subordinate r).is_Henstock :=
+begin
+  rw to_subordinate, split_ifs with hr,
+  exacts [(π.exists_tagged_le_is_Henstock_is_subordinate_Union_eq hr).some_spec.2.1,
+    is_Henstock_bUnion_tagged.2 $ λ J hJ, is_Henstock_single _]
+end
+
+lemma is_subordinate_to_subordinate (π : prepartition I) {r : (ι → ℝ) → ℝ}
+  (hr : ∀ x ∈ I.Icc, 0 < r x) :
+  (π.to_subordinate r).is_subordinate r :=
+begin
+  rw [to_subordinate, dif_pos hr],
+  exact (π.exists_tagged_le_is_Henstock_is_subordinate_Union_eq hr).some_spec.2.2.1
+end
+
+@[simp] lemma distortion_to_subordinate (π : prepartition I) (r : (ι → ℝ) → ℝ) :
+  (π.to_subordinate r).distortion = π.distortion :=
+begin
+  rw to_subordinate, split_ifs with hr,
+  { exact (π.exists_tagged_le_is_Henstock_is_subordinate_Union_eq hr).some_spec.2.2.2.1 },
+  { simp [← distortion] }
+end
+
+@[simp] lemma Union_to_subordinate (π : prepartition I) (r : (ι → ℝ) → ℝ) :
+  (π.to_subordinate r).Union = π.Union :=
+begin
+  rw to_subordinate, split_ifs with hr,
+  { exact (π.exists_tagged_le_is_Henstock_is_subordinate_Union_eq hr).some_spec.2.2.2.2 },
+  { simp [← Union_def] }
 end
 
 end prepartition

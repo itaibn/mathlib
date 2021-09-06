@@ -1946,6 +1946,8 @@ multiset.erase_dup_eq_self.2 (nodup_map_on H s.2)
 theorem image_id [decidable_eq α] : s.image id = s :=
 ext $ λ _, by simp only [mem_image, exists_prop, id, exists_eq_right]
 
+@[simp] theorem image_id' [decidable_eq α] : s.image (λ x, x) = s := image_id
+
 theorem image_image [decidable_eq γ] {g : β → γ} : (s.image f).image g = s.image (g ∘ f) :=
 eq_of_veq $ by simp only [image_val, erase_dup_map_erase_dup_eq, multiset.map_map]
 

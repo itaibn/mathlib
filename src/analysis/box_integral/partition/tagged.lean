@@ -47,6 +47,10 @@ def Union : set (ι → ℝ) := π.to_prepartition.Union
 
 lemma Union_def : π.Union = ⋃ J ∈ π, ↑J := rfl
 
+@[simp] lemma Union_mk (π : prepartition I) (f h) : (mk π f h).Union = π.Union := rfl
+
+@[simp] lemma Union_to_prepartition : π.to_prepartition.Union = π.Union := rfl
+
 @[simp] lemma mem_Union : x ∈ π.Union ↔ ∃ J ∈ π, x ∈ J := set.mem_bUnion_iff
 
 lemma subset_Union (h : J ∈ π) : ↑J ⊆ π.Union := subset_bUnion_of_mem h
@@ -117,6 +121,7 @@ returns the tagged partition of `I` into all the boxes of all `πi J hJ`. The ta
 is defined to be the `π.tag` of the box of the partition `π` that includes `J`.
 
 Note that usually the result is not a Henstock partition. -/
+@[simps tag { fully_applied := ff }]
 def bUnion_prepartition (π : tagged_prepartition I) (πi : Π J, prepartition J) :
   tagged_prepartition I :=
 { to_prepartition := π.to_prepartition.bUnion πi,
@@ -227,6 +232,10 @@ forall_mem_single (λ x J, x ∈ J.Icc) hJ h
   is_subordinate (single I J hJ x h) r ↔ J.Icc ⊆ closed_ball x (r x) :=
 forall_mem_single (λ x J, J.Icc ⊆ closed_ball x (r x)) hJ h
 
+@[simp] lemma Union_single (hJ : J ≤ I) (h : x ∈ I.Icc) :
+  (single I J hJ x h).Union = J :=
+prepartition.Union_single hJ
+
 /-- Union of two tagged prepartitions with disjoint unions of boxes. -/
 def disj_union (π₁ : tagged_prepartition I) :
   tagged_prepartition I →. tagged_prepartition I := λ π₂,
@@ -252,6 +261,24 @@ lemma disj_union_tag_of_mem_right (h : disjoint π₁.Union π₂.Union) (hJ : J
   ((π₁.disj_union π₂).get h).tag J = π₂.tag J :=
 dif_neg $ λ h₁, h ⟨π₁.subset_Union h₁ J.upper_mem, π₂.subset_Union hJ J.upper_mem⟩
 
+lemma is_subordinate.disj_union [fintype ι] {r} (h₁ : is_subordinate π₁ r)
+  (h₂ : is_subordinate π₂ r) (h : disjoint π₁.Union π₂.Union) :
+  is_subordinate ((π₁.disj_union π₂).get h) r :=
+begin
+  refine λ J hJ, (finset.mem_union.1 hJ).elim (λ hJ, _) (λ hJ, _),
+  { rw disj_union_tag_of_mem_left _ hJ, exact h₁ _ hJ },
+  { rw disj_union_tag_of_mem_right _ hJ, exact h₂ _ hJ }
+end
+
+lemma is_Henstock.disj_union (h₁ : is_Henstock π₁) (h₂ : is_Henstock π₂)
+  (h : disjoint π₁.Union π₂.Union) :
+  is_Henstock ((π₁.disj_union π₂).get h) :=
+begin
+  refine λ J hJ, (finset.mem_union.1 hJ).elim (λ hJ, _) (λ hJ, _),
+  { rw disj_union_tag_of_mem_left _ hJ, exact h₁ _ hJ },
+  { rw disj_union_tag_of_mem_right _ hJ, exact h₂ _ hJ }
+end
+
 def union_compl (π : tagged_prepartition I) : tagged_prepartition I →. tagged_prepartition I :=
 @pfun.restrict _ _ π.disj_union {π' | π'.Union = I \ π.Union} $ λ π' (H : π'.Union = _),
   disjoint_sdiff_self_right.mono_right H.le
@@ -274,6 +301,24 @@ disj_union_tag_of_mem_right _ hJ
 lemma is_partition_union_compl_get (h : π₂.Union = I \ π₁.Union) :
   is_partition ((π₁.union_compl π₂).get h) :=
 prepartition.is_partition_union_compl_get h
+
+lemma is_subordinate.union_compl [fintype ι] {r} (h₁ : is_subordinate π₁ r)
+  (h₂ : is_subordinate π₂ r) (h : π₂.Union = I \ π₁.Union) :
+  is_subordinate ((π₁.union_compl π₂).get h) r :=
+h₁.disj_union h₂ _
+
+lemma is_Henstock.union_compl (h₁ : is_Henstock π₁) (h₂ : is_Henstock π₂)
+  (h : π₂.Union = I \ π₁.Union) :
+  is_Henstock ((π₁.union_compl π₂).get h) :=
+h₁.disj_union h₂ _
+
+def embed_box (I J : box ι) (h : I ≤ J) :
+  tagged_prepartition I ↪ tagged_prepartition J :=
+{ to_fun := λ π,
+  { le_of_mem' := λ J' hJ', (π.le_of_mem' J' hJ').trans h,
+    tag_mem_Icc := λ J, box.le_iff_Icc.1 h (π.tag_mem_Icc J),
+    .. π },
+  inj' := by { rintro ⟨⟨b₁, h₁le, h₁d⟩, t₁, ht₁⟩ ⟨⟨b₂, h₂le, h₂d⟩, t₂, ht₂⟩ H, simpa using H } }
 
 section distortion
 
@@ -302,7 +347,7 @@ sup_bUnion _ _
   ((π₁.disj_union π₂).get h).distortion = max π₁.distortion π₂.distortion :=
 sup_union
 
-lemma distortion_union_compl_get (h : π₂.Union = I \ π₁.Union) :
+@[simp] lemma distortion_union_compl_get (h : π₂.Union = I \ π₁.Union) :
   ((π₁.union_compl π₂).get h).distortion = max π₁.distortion π₂.distortion :=
 sup_union
 
@@ -310,7 +355,7 @@ lemma distortion_of_const {c} (h₁ : π.boxes.nonempty) (h₂ : ∀ J ∈ π, b
   π.distortion = c :=
 (sup_congr rfl h₂).trans (sup_const h₁ _)
 
-lemma distortion_single (hJ : J ≤ I) (h : x ∈ I.Icc) :
+@[simp] lemma distortion_single (hJ : J ≤ I) (h : x ∈ I.Icc) :
   distortion (single I J hJ x h) = J.distortion :=
 sup_singleton
 

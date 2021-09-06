@@ -161,12 +161,49 @@ lemma _root_.is_open.exists_lt_is_compact [regular μ] ⦃U : set α⦄ (hU : is
   ∃ K, is_compact K ∧ K ⊆ U ∧ r < μ K :=
 begin
   rw hU.measure_eq_supr_is_compact at hr,
-  simpa only [lt_supr_iff, exists_prop] using hr,
+  simpa only [lt_supr_iff, exists_prop] using hr
+end
+
+lemma _root_.is_open.exists_is_compact_diff_lt [t2_space α] [regular μ] [opens_measurable_space α]
+  ⦃U : set α⦄ (hU : is_open U) (hμU : μ U ≠ ∞) {r : ℝ≥0∞} (hr : 0 < r) :
+  ∃ K, is_compact K ∧ K ⊆ U ∧ μ (U \ K) < r :=
+begin
+  cases eq_or_ne (μ U) 0 with h₀ h₀,
+  { refine ⟨∅, is_compact_empty, empty_subset _, _⟩,
+    rwa [diff_empty, h₀] },
+  { rcases hU.exists_lt_is_compact (ennreal.sub_lt_self hμU h₀ hr) with ⟨K, hKc, hKU, hrK⟩,
+    refine ⟨K, hKc, hKU, _⟩,
+    calc μ (U \ K) = μ U - μ K : measure_diff hKU hU.measurable_set hKc.measurable_set
+      (ne_top_of_le_ne_top hμU (measure_mono hKU))
+    ... < r : ennreal.sub_lt_of_sub_lt hrK (measure_mono hKU) (or.inl hμU) }
 end
 
 lemma exists_compact_not_null [regular μ] : (∃ K, is_compact K ∧ μ K ≠ 0) ↔ μ ≠ 0 :=
 by simp_rw [ne.def, ← measure_univ_eq_zero, is_open_univ.measure_eq_supr_is_compact,
     ennreal.supr_eq_zero, not_forall, exists_prop, subset_univ, true_and]
+
+/-- If `s` is a measurable set, a regular measure `μ` is finite on `s`, and `r` is a positive
+number, then there exist a compact set `K ⊆ s` and an open set `U ⊇ s` such that `μ (U \ K) < r`. -/
+lemma _root_.measurable_set.exists_is_compact_is_open_diff_lt [t2_space α] [regular μ]
+  [opens_measurable_space α] {s : set α} (hs : measurable_set s) (hμs : μ s ≠ ∞)
+  {r : ℝ≥0∞} (hr : 0 < r) :
+  ∃ K U, is_compact K ∧ is_open U ∧ K ⊆ s ∧ s ⊆ U ∧ μ (U \ K) < r :=
+begin
+  rcases hs.exists_is_open_lt_of_lt' (μ s + r / 2) (ennreal.lt_add_right hμs (ennreal.half_pos hr))
+    with ⟨U, hUo, hsU, hμU⟩,
+  have : μ (U \ s) < r / 2,
+  { rw [measure_diff hsU hUo.measurable_set hs hμs],
+    refine ennreal.sub_lt_of_lt_add (measure_mono hsU) _, rwa add_comm },
+  rcases (hUo.measurable_set.diff hs).exists_is_open_lt_of_lt' _ this with ⟨U', hU'o, hsU', hμU'⟩,
+  rw diff_subset_comm at hsU',
+  rcases hUo.exists_is_compact_diff_lt (ne_top_of_lt hμU) (ennreal.half_pos hr)
+    with ⟨K, hKc, hKU, hKr⟩,
+  refine ⟨K \ U', U, hKc.diff hU'o, hUo, λ x hx, hsU' ⟨hKU hx.1, hx.2⟩, hsU, _⟩,
+  rw [diff_diff_right, ← ennreal.add_halves r],
+  calc μ (U \ K ∪ U ∩ U') ≤ μ (U \ K) + μ (U ∩ U') : measure_union_le _ _
+  ... < r / 2 + r / 2 :
+    ennreal.add_lt_add hKr ((measure_mono $ inter_subset_right _ _).trans_lt hμU')
+end
 
 protected lemma map [opens_measurable_space α] [measurable_space β] [topological_space β]
   [t2_space β] [borel_space β] [regular μ] (f : α ≃ₜ β) :
@@ -260,9 +297,46 @@ begin
   simpa only [lt_supr_iff, exists_prop] using hr,
 end
 
+lemma _root_.is_open.exists_is_closed_diff_lt [weakly_regular μ] [opens_measurable_space α]
+  ⦃U : set α⦄ (hU : is_open U) (hμU : μ U ≠ ∞) {r : ℝ≥0∞} (hr : 0 < r) :
+  ∃ K, is_closed K ∧ K ⊆ U ∧ μ (U \ K) < r :=
+begin
+  cases eq_or_ne (μ U) 0 with h₀ h₀,
+  { refine ⟨∅, is_closed_empty, empty_subset _, _⟩,
+    rwa [diff_empty, h₀] },
+  { rcases hU.exists_lt_is_closed_of_gt _ (ennreal.sub_lt_self hμU h₀ hr) with ⟨K, hKc, hKU, hrK⟩,
+    refine ⟨K, hKc, hKU, _⟩,
+    calc μ (U \ K) = μ U - μ K : measure_diff hKU hU.measurable_set hKc.measurable_set
+      (ne_top_of_le_ne_top hμU (measure_mono hKU))
+    ... < r : ennreal.sub_lt_of_sub_lt hrK (measure_mono hKU) (or.inl hμU) }
+end
+
+/-- If `s` is a measurable set, a weakly regular measure `μ` is finite on `s`, and `r` is a positive
+number, then there exist a closed set `K ⊆ s` and an open set `U ⊇ s` such that `μ (U \ K) < r`. -/
+lemma _root_.measurable_set.exists_is_closed_is_open_diff_lt [weakly_regular μ]
+  [opens_measurable_space α] {s : set α} (hs : measurable_set s) (hμs : μ s ≠ ∞)
+  {r : ℝ≥0∞} (hr : 0 < r) :
+  ∃ K U, is_closed K ∧ is_open U ∧ K ⊆ s ∧ s ⊆ U ∧ μ (U \ K) < r :=
+begin
+  rcases hs.exists_is_open_lt_of_lt (μ s + r / 2) (ennreal.lt_add_right hμs (ennreal.half_pos hr))
+    with ⟨U, hUo, hsU, hμU⟩,
+  have : μ (U \ s) < r / 2,
+  { rw [measure_diff hsU hUo.measurable_set hs hμs],
+    refine ennreal.sub_lt_of_lt_add (measure_mono hsU) _, rwa add_comm },
+  rcases (hUo.measurable_set.diff hs).exists_is_open_lt_of_lt _ this with ⟨U', hU'o, hsU', hμU'⟩,
+  rw diff_subset_comm at hsU',
+  rcases hUo.exists_is_closed_diff_lt (ne_top_of_lt hμU) (ennreal.half_pos hr)
+    with ⟨K, hKc, hKU, hKr⟩,
+  refine ⟨K \ U', U, hKc.inter hU'o.is_closed_compl, hUo, λ x hx, hsU' ⟨hKU hx.1, hx.2⟩, hsU, _⟩,
+  rw [diff_diff_right, ← ennreal.add_halves r],
+  calc μ (U \ K ∪ U ∩ U') ≤ μ (U \ K) + μ (U ∩ U') : measure_union_le _ _
+  ... < r / 2 + r / 2 :
+    ennreal.add_lt_add hKr ((measure_mono $ inter_subset_right _ _).trans_lt hμU')
+end
+
 /-- Given a weakly regular measure, any finite measure set is contained in a finite measure open
 set.-/
-lemma exists_subset_is_open_measure_lt_top [weakly_regular μ] {A : set α} (h'A : μ A < ∞) :
+lemma exists_subset_is_open_measure_lt_top [weakly_regular μ] {A : set α} (h'A : μ A ≠ ∞) :
   ∃ U, is_open U ∧ A ⊆ U ∧ μ U < ∞ :=
 begin
   rcases exists_measurable_superset μ A with ⟨B, AB, B_meas, μB⟩,
@@ -272,7 +346,8 @@ begin
     simpa only [add_zero] using (ennreal.add_lt_add_iff_left h'A).mpr ennreal.zero_lt_one },
   simp only [infi_lt_iff] at this,
   rcases this with ⟨U, U_open, BU, hU⟩,
-  exact ⟨U, U_open, subset.trans AB BU, hU.trans (ennreal.add_lt_top.2 ⟨h'A, ennreal.one_lt_top⟩)⟩
+  exact ⟨U, U_open, subset.trans AB BU, hU.trans
+    (lt_top_iff_ne_top.2 $ ennreal.add_ne_top.2 ⟨h'A, ennreal.one_ne_top⟩)⟩
 end
 
 /-- In a finite measure space, assume that any open set can be approximated from inside by closed
@@ -305,7 +380,7 @@ begin
       simp_rw [supr_and', supr_subtype'], },
     have : μ U < (⨆ (F : set α) (hF : is_closed F) (FU : F ⊆ U), (μ F + ε)),
     { apply lt_of_lt_of_le _ this,
-      simpa using (ennreal.add_lt_add_iff_left (measure_lt_top μ U)).2 hε },
+      simpa using (ennreal.add_lt_add_iff_left (measure_ne_top μ U)).2 hε },
     simp only [lt_supr_iff] at this,
     rcases this with ⟨F, F_closed, FU, μF⟩,
     exact ⟨F, F_closed, FU, μF.le⟩ },

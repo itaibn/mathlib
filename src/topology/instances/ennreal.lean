@@ -207,7 +207,7 @@ begin
   { rw ha at *,
     rcases exists_between xs with ⟨b, ⟨ab, bx⟩⟩,
     have xb_pos : x - b > 0 := zero_lt_sub_iff_lt.2 bx,
-    have xxb : x - (x - b) = b := sub_sub_cancel (by rwa lt_top_iff_ne_top) (le_of_lt bx),
+    have xxb : x - (x - b) = b := sub_sub_cancel xt bx.le,
     refine infi_le_of_le (x - b) (infi_le_of_le xb_pos _),
     simp only [mem_principal, le_principal_iff],
     assume y, rintros ⟨h₁, h₂⟩, rw xxb at h₁, calc a < b : ab ... ≤ y : h₁ },
@@ -662,7 +662,7 @@ protected lemma tsum_apply {ι α : Type*} {f : ι → α → ℝ≥0∞} {x : �
   (∑' i, f i) x = ∑' i, f i x :=
 tsum_apply $ pi.summable.mpr $ λ _, ennreal.summable
 
-lemma tsum_sub {f : ℕ → ℝ≥0∞} {g : ℕ → ℝ≥0∞} (h₁ : ∑' i, g i < ∞) (h₂ : g ≤ f) :
+lemma tsum_sub {f : ℕ → ℝ≥0∞} {g : ℕ → ℝ≥0∞} (h₁ : ∑' i, g i ≠ ∞) (h₂ : g ≤ f) :
   ∑' i, (f i - g i) = (∑' i, f i) - (∑' i, g i) :=
 begin
   have h₃: ∑' i, (f i - g i) = ∑' i, (f i - g i + g i) - ∑' i, g i,
@@ -1025,7 +1025,7 @@ begin
   show ∀e, e < f x → ∀ᶠ y in 𝓝 x, e < f y,
   { assume e he,
     let ε := min (f x - e) 1,
-    have : ε < ⊤ := lt_of_le_of_lt (min_le_right _ _) (by simp [lt_top_iff_ne_top]),
+    have : ε ≠ ⊤ := ne_top_of_le_ne_top ennreal.coe_ne_top (min_le_right _ _),
     have : 0 < ε := by simp [ε, hC, he, ennreal.zero_lt_one],
     have : 0 < C⁻¹ * (ε/2) := bot_lt_iff_ne_bot.2 (by simp [hC, (ne_of_lt this).symm, mul_eq_zero]),
     have I : C * (C⁻¹ * (ε/2)) < ε,
@@ -1033,7 +1033,7 @@ begin
       { simp [C_zero, ‹0 < ε›] },
       { calc C * (C⁻¹ * (ε/2)) = (C * C⁻¹) * (ε/2) : by simp [mul_assoc]
         ... = ε/2 : by simp [ennreal.mul_inv_cancel C_zero hC]
-        ... < ε : ennreal.half_lt_self (‹0 < ε›.ne') (‹ε < ⊤›.ne) }},
+        ... < ε : ennreal.half_lt_self (‹0 < ε›.ne') (‹ε ≠ ⊤›) }},
     have : ball x (C⁻¹ * (ε/2)) ⊆ {y : α | e < f y},
     { rintros y hy,
       by_cases htop : f y = ⊤,
@@ -1046,9 +1046,8 @@ begin
           ... = f y + C * edist y x : by simp [edist_comm]
           ... ≤ f y + C * (C⁻¹ * (ε/2)) :
             add_le_add_left (mul_le_mul_left' (le_of_lt hy) _) _
-          ... < f y + ε : (ennreal.add_lt_add_iff_left (lt_top_iff_ne_top.2 htop)).2 I,
-        show e < f y, from
-          (ennreal.add_lt_add_iff_right ‹ε < ⊤›).1 this }},
+          ... < f y + ε : (ennreal.add_lt_add_iff_left htop).2 I,
+        show e < f y, from (ennreal.add_lt_add_iff_right ‹ε ≠ ⊤›).1 this }},
     apply filter.mem_of_superset (ball_mem_nhds _ (‹0 < C⁻¹ * (ε/2)›)) this },
   show ∀e, f x < e → ∀ᶠ y in 𝓝 x, f y < e,
   { assume e he,
@@ -1069,7 +1068,7 @@ begin
         f y ≤ f x + C * edist y x : h y x
         ... ≤ f x + C * (C⁻¹ * (ε/2)) :
             add_le_add_left (mul_le_mul_left' (le_of_lt hy) _) _
-        ... < f x + ε : (ennreal.add_lt_add_iff_left (lt_top_iff_ne_top.2 htop)).2 I
+        ... < f x + ε : (ennreal.add_lt_add_iff_left htop).2 I
         ... ≤ f x + (e - f x) : add_le_add_left (min_le_left _ _) _
         ... = e : by simp [le_of_lt he] },
     apply filter.mem_of_superset (ball_mem_nhds _ (‹0 < C⁻¹ * (ε/2)›)) this },

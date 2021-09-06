@@ -6,7 +6,8 @@ open_locale classical big_operators nnreal ennreal topological_space
 open continuous_linear_map (lsmul) filter set finset metric
 noncomputable theory
 
-variables {ι E : Type*} [normed_group E] [normed_space ℝ E]
+universes u v
+variables {ι : Type u} {E : Type v} [normed_group E] [normed_space ℝ E]
 
 section
 
@@ -73,39 +74,42 @@ namespace box_integral
 
 variables (I : box ι)
 
-lemma maps_to_pi_insert_one_comap_Icc (I : box ι) (i : ι) (x : ℝ)
+lemma maps_to_pi_insert_one_face_Icc (I : box ι) (i : ι) (x : ℝ)
   (hx : x ∈ Icc (I.lower i) (I.upper i)) :
-  maps_to (pi_insert_one i x) (box.comap coe I).Icc I.Icc :=
+  maps_to (pi_insert_one i x) (I.face i).Icc I.Icc :=
 λ y hy, pi_insert_one_mem_Icc.2 ⟨hx, λ j hj, ⟨hy.1 ⟨j, hj⟩, hy.2 ⟨j, hj⟩⟩⟩
 
-lemma continuous_on_comap_coe_box {X : Type*} [topological_space X]
+lemma continuous_on_face_Icc {X : Type*} [topological_space X]
   {f : (ι → ℝ) → X} (hf : continuous_on f I.Icc) (i : ι) (x : ℝ)
   (hx : x ∈ Icc (I.lower i) (I.upper i)) :
-  continuous_on (λ y, f (pi_insert_one i x y)) (box.comap coe I).Icc :=
-hf.comp (continuous_pi_insert_one i x).continuous_on (maps_to_pi_insert_one_comap_Icc _ _ _ hx)
+  continuous_on (λ y, f (pi_insert_one i x y)) (I.face i).Icc :=
+hf.comp (continuous_pi_insert_one i x).continuous_on (maps_to_pi_insert_one_face_Icc _ _ _ hx)
 
 variable [fintype ι]
+open measure_theory
 
 lemma norm_volume_sub_integral_face_upper_sub_lower_smul_le [complete_space E] {I : box ι}
   {f : (ι → ℝ) → E} {i : ι} {f' : (ι → ℝ) →L[ℝ] E} (hfc : continuous_on f I.Icc)
   {x : ι → ℝ} (hxI : x ∈ I.Icc) {a : E} {ε : ℝ} (h0 : 0 < ε)
   (hε : ∀ y ∈ I.Icc, ∥f y - a - f' (y - x)∥ ≤ ε * ∥y - x∥) {c : ℝ≥0} (hc : I.distortion ≤ c) :
-  ∥I.volume • (f' (pi.single i 1)) -
-    (integral (box.comap coe I) Henstock' volume (f ∘ pi_insert_one i (I.upper i)) -
-      integral (box.comap coe I) Henstock' volume (f ∘ pi_insert_one i (I.lower i)))∥ ≤
-    2 * ε * c * I.volume :=
+  ∥(volume : measure (ι → ℝ)).to_box_additive I • (f' (pi.single i 1)) -
+    (integral (I.face i) ⊥ (f ∘ pi_insert_one i (I.upper i))
+      (volume : measure (({i}ᶜ : set ι) → ℝ)).to_box_additive.to_smul -
+      integral (I.face i) ⊥ (f ∘ pi_insert_one i (I.lower i))
+        (volume : measure (({i}ᶜ : set ι) → ℝ)).to_box_additive.to_smul)∥ ≤
+    2 * ε * c * (volume : measure (ι → ℝ)).to_box_additive I :=
 begin
   have Hl : I.lower i ∈ Icc (I.lower i) (I.upper i), from left_mem_Icc.2 (I.lower_le_upper i),
   have Hu : I.upper i ∈ Icc (I.lower i) (I.upper i), from right_mem_Icc.2 (I.lower_le_upper i),
   have Hi : ∀ x ∈ Icc (I.lower i) (I.upper i),
-    integrable (box.comap coe I) Henstock' volume (f ∘ pi_insert_one i x),
-    from λ x hx, Henstock'_integrable_of_continuous_on (continuous_on_comap_coe_box _ hfc _ _ hx),
-  rw [← integral_sub (Hi _ Hu) (Hi _ Hl), ← box.volume_comap_coe_mul i, mul_smul, ← volume_apply,
-    ← integral_const (box_additive_on_volume _),
-    ← integral_sub (integrable_const (box_additive_on_volume _) _) ((Hi _ Hu).sub (Hi _ Hl))];
-    [skip, apply_instance, apply_instance],
+    @integrable ({i}ᶜ : set ι) E E _ _ _ _ _ (I.face i) ⊥ (f ∘ pi_insert_one i x)
+      (volume : measure (({i}ᶜ : set ι) → ℝ)).to_box_additive.to_smul,
+    from λ x hx, integrable_of_continuous_on (continuous_on_face_Icc _ hfc _ _ hx) volume,
+  rw [← integral_sub (Hi _ Hu) (Hi _ Hl), ← box.volume_face_mul i, mul_smul,
+    ← box_additive_map.to_smul_apply, ← integral_const,
+    ← integral_sub (integrable_const _) ((Hi _ Hu).sub (Hi _ Hl)), measure.to_box_additive_apply],
   simp only [(∘), pi.sub_def, ← f'.map_smul, ← pi.single_smul'', smul_eq_mul, mul_one],
-  have : ∀ y ∈ (box.comap coe I).Icc, ∥f' (pi.single i (I.upper i - I.lower i)) -
+  have : ∀ y ∈ (I.face i).Icc, ∥f' (pi.single i (I.upper i - I.lower i)) -
     (f (pi_insert_one i (I.upper i) y) - f (pi_insert_one i (I.lower i) y))∥ ≤ 2 * ε * diam I.Icc,
   { intros y hy,
     set g := λ y, f y - a - f' (y - x) with hg,
@@ -114,7 +118,7 @@ begin
     convert_to ∥g (pi_insert_one i (I.lower i) y) - g (pi_insert_one i (I.upper i) y)∥ ≤ _,
     { congr' 1, simp only [← pi_insert_one_sub_eq_single i _ _ y, f'.map_sub], abel },
     { have : ∀ z ∈ Icc (I.lower i) (I.upper i), pi_insert_one i z y ∈ I.Icc,
-        from λ z hz, maps_to_pi_insert_one_comap_Icc _ _ _ hz hy,
+        from λ z hz, maps_to_pi_insert_one_face_Icc _ _ _ hz hy,
       replace hε : ∀ y ∈ I.Icc, ∥g y∥ ≤ ε * diam I.Icc,
       { intros y hy,
         refine (hε y hy).trans (mul_le_mul_of_nonneg_left _ h0.le),
@@ -122,39 +126,45 @@ begin
         exact dist_le_diam_of_mem (is_compact_pi_Icc I.lower I.upper).bounded hy hxI },
       rw [two_mul, add_mul],
       exact norm_sub_le_of_le (hε _ (this _ Hl)) (hε _ (this _ Hu)) } },
-  refine (norm_integral_le_of_le_const this).trans _,
-  rw [mul_left_comm (box.volume _), mul_assoc (2 * ε), mul_left_comm (c : ℝ)],
+  refine (norm_integral_le_of_le_const this volume).trans _,
+  rw [mul_left_comm (volume _).to_real, mul_assoc (2 * ε), mul_left_comm (c : ℝ)],
   refine mul_le_mul_of_nonneg_left _ (mul_nonneg zero_le_two h0.le),
-  refine mul_le_mul_of_nonneg_left _ (box.volume_pos _).le,
+  refine mul_le_mul_of_nonneg_left _ ennreal.to_real_nonneg,
   exact (I.diam_Icc_le_distortion_mul i).trans
     (mul_le_mul_of_nonneg_right hc $ sub_nonneg.2 $ I.lower_le_upper i)
 end
 
-lemma has_integral_Henstock'_divergence_of_forall_has_deriv_within_at [complete_space E]
+lemma has_integral_bot_divergence_of_forall_has_deriv_within_at [complete_space E]
   (f : ι → (ι → ℝ) → E) (f' : ι → (ι → ℝ) → (ι → ℝ) →L[ℝ] E)
   (H : ∀ (x ∈ I.Icc) i, has_fderiv_within_at (f i) (f' i x) I.Icc x) :
-  has_integral I Henstock' (volume : box ι → E →L[ℝ] E) (λ x, ∑ i, f' i x (pi.single i 1))
-    (∑ i, (integral (box.comap coe I) Henstock' volume (λ x, f i (pi_insert_one i (I.upper i) x)) -
-      integral (box.comap coe I) Henstock' volume (λ x, f i (pi_insert_one i (I.lower i) x)))) :=
+  @has_integral ι E E _ _ _ _ _ I ⊥ (λ x, ∑ i, f' i x (pi.single i 1))
+    (volume : measure (ι → ℝ)).to_box_additive.to_smul
+    (∑ i, ((@integral _ E E _ _ _ _ _ (I.face i) ⊥ (λ x, f i (pi_insert_one i (I.upper i) x))
+      (volume : measure (({i}ᶜ : set ι) → ℝ)).to_box_additive.to_smul) -
+      @integral _ E E _ _ _ _ _ (I.face i) ⊥ (λ x, f i (pi_insert_one i (I.lower i) x))
+        (volume : measure (({i}ᶜ : set ι) → ℝ)).to_box_additive.to_smul)) :=
 begin
   refine has_integral_sum (λ i hi, _), clear hi,
   have Hd : differentiable_on ℝ (f i) I.Icc, from λ x hx, ⟨_, H x hx i⟩,
-  apply has_integral_Henstock'_of_forall_is_o box.volume (box_additive_on_box_volume I),
-  { convert box_additive_on_upper_sub_lower I i (λ x J, integral J Henstock' volume
-      (λ y, f i (pi_insert_one i x y))) (λ x hx, _),
-    refine box_additive_on_integral_Henstock' (λ J hJ, Henstock'_integrable_of_continuous_on _),
-    refine (continuous_on_comap_coe_box _ Hd.continuous_on _ _ hx).mono (box.le_iff_Icc.1 hJ) },
-  { intros c x hx ε ε0,
-    rcases exists_pos_mul_lt ε0 (2 * c) with ⟨ε', ε'0, hlt⟩,
-    rcases (nhds_within_has_basis nhds_basis_closed_ball _).mem_iff.1 ((H x hx i).def ε'0)
-      with ⟨δ, δ0, Hδ⟩,
-    refine ⟨δ, δ0, λ J hle hJδ hxJ hJc, _⟩,
-    rw dist_eq_norm,
-    refine (norm_volume_sub_integral_face_upper_sub_lower_smul_le
-      (Hd.continuous_on.mono $ (@box.Icc ι).monotone hle) hxJ ε'0 (λ y hy, Hδ _) hJc).trans _,
-    { exact ⟨hJδ hy, box.le_iff_Icc.1 hle hy⟩ },
-    { rw mul_right_comm (2 : ℝ), exact mul_le_mul_of_nonneg_right hlt.le J.volume_pos.le } }
+  set fI : ℝ → box ({i}ᶜ : set ι) → E := λ y J,
+    @integral _ E E _ _ _ _ _ J ⊥ (λ x, f i (pi_insert_one i y x))
+        (volume : measure (({i}ᶜ : set ι) → ℝ)).to_box_additive.to_smul,
+  set fb : Icc (I.lower i) (I.upper i) → (({i}ᶜ : set ι) : Type u) →ᵇᵃ[↑(I.face i)] E :=
+    λ x, (integrable_of_continuous_on ⊥ (continuous_on_face_Icc I Hd.continuous_on i x x.2)
+      volume).to_box_additive,
+  set F : ι →ᵇᵃ[I] E := box_additive_map.upper_sub_lower I i fI fb (λ x hx J, rfl),
+  change has_integral I ⊥ (λ x, f' i x (pi.single i 1)) _ (F I),
+  refine has_integral_bot_of_forall_is_o
+    ((volume : measure (ι → ℝ)).to_box_additive.restrict I le_top) F (λ c x hx ε ε0, _),
+  rcases exists_pos_mul_lt ε0 (2 * c) with ⟨ε', ε'0, hlt⟩,
+  rcases (nhds_within_has_basis nhds_basis_closed_ball _).mem_iff.1 ((H x hx i).def ε'0)
+    with ⟨δ, δ0, Hδ⟩,
+  refine ⟨δ, δ0, λ J hle hJδ hxJ hJc, _⟩,
+  rw dist_eq_norm,
+  refine (norm_volume_sub_integral_face_upper_sub_lower_smul_le
+    (Hd.continuous_on.mono $ (@box.Icc ι).monotone hle) hxJ ε'0 (λ y hy, Hδ _) hJc).trans _,
+  { exact ⟨hJδ hy, box.le_iff_Icc.1 hle hy⟩ },
+  { rw mul_right_comm (2 : ℝ), exact mul_le_mul_of_nonneg_right hlt.le ennreal.to_real_nonneg }
 end
    
-
 end box_integral

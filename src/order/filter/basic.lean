@@ -2449,7 +2449,7 @@ le_antisymm
 lemma prod_map_map_eq' {α₁ : Type*} {α₂ : Type*} {β₁ : Type*} {β₂ : Type*}
   (f : α₁ → α₂) (g : β₁ → β₂) (F : filter α₁) (G : filter β₁) :
   (map f F) ×ᶠ (map g G) = map (prod.map f g) (F ×ᶠ G) :=
-by { rw filter.prod_map_map_eq, refl }
+prod_map_map_eq
 
 lemma tendsto.prod_map {δ : Type*} {f : α → γ} {g : β → δ} {a : filter α} {b : filter β}
   {c : filter γ} {d : filter δ} (hf : tendsto f a c) (hg : tendsto g b d) :
