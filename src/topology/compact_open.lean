@@ -5,6 +5,8 @@ Authors: Reid Barton
 
 Type of continuous maps and the compact-open topology on them.
 -/
+import topology.algebra.infinite_sum
+import topology.continuous_function.algebra
 import topology.subset_properties
 import topology.continuous_function.basic
 import topology.homeomorph
@@ -81,6 +83,63 @@ begin
     ext s,
     simp [uniform_on.gen] },
   simp [generate_from_Union, uniform_on]
+end
+
+lemma nhds_compact_open_eq_Inf (f : C(α, β)) :
+  nhds f = ⨅ (s : set α) (hs : is_compact s), @nhds _ (uniform_on β s) f :=
+by { rw [compact_open_eq_Inf_uniform_on], simp [nhds_infi] }
+
+lemma tendsto_compact_open_iff_forall {ι : Type*} {l : filter ι} (F : ι → C(α, β)) (f : C(α, β)) :
+  filter.tendsto F l (nhds f)
+  ↔ ∀ (s : set α) (hs : is_compact s), filter.tendsto F l (@nhds _ (uniform_on β s) f) :=
+by { rw [compact_open_eq_Inf_uniform_on], simp [nhds_infi] }
+
+lemma continuous_eval {s : set α} {a : α} (ha : a ∈ s) :
+  @continuous _ _ (uniform_on β s) _ (λ f, f a) :=
+sorry
+
+lemma nhds_uniform_on_eq_nhds_uniform_on_iff [t2_space β] (s : set α) (f₁ f₂ : C(α, β)) :
+  @nhds _ (uniform_on β s) f₁ = @nhds _ (uniform_on β s) f₂ ↔ eq_on f₁ f₂ s :=
+sorry
+
+-- gluing lemma, probably can be made a bit more general
+lemma gluing [locally_compact_space α] [t2_space β] {ι : Type*} {l : filter ι} [filter.ne_bot l]
+  (F : ι → C(α, β)) :
+  (∃ f, filter.tendsto F l (nhds f))
+  ↔ ∀ (s : set α) (hs : is_compact s), ∃ f, filter.tendsto F l (@nhds _ (uniform_on β s) f) :=
+begin
+  split,
+  { rintros ⟨f, hf⟩ s hs,
+    rw tendsto_compact_open_iff_forall at hf,
+    exact ⟨f, hf s hs⟩ },
+  { intros h,
+    choose pi_f h_pi_f using h,
+    choose s hs hsx using @exists_compact_mem_nhds α _ _,
+    have h_pi_f' : ∀ (s : set α) (hs : is_compact s), ∀ y ∈ s,
+      filter.tendsto (λ i, F i y) l (nhds (pi_f s hs y)),
+    { intros s hs y hy,
+      have h := (continuous_eval hy).continuous_at.tendsto,
+      exact h.comp (h_pi_f s hs) },
+    let f : α → C(α, β) := λ x, pi_f (s x) (hs x),
+    have hf' : ∀ x, ∀ y ∈ s x, filter.tendsto (λ i, F i y) l (nhds (f x y)),
+    { exact λ x, h_pi_f' (s x) (hs x) },
+    let f₀ : α → β := λ x, f x x,
+    have hf₀ : ∀ x, filter.tendsto (λ i, F i x) l (nhds (f₀ x)),
+    { exact λ x, hf' x x (mem_of_mem_nhds (hsx x)) },
+    have hf₀_cont : continuous f₀,
+    { rw continuous_iff_continuous_at,
+      intros x,
+      refine (f x).continuous.continuous_at.congr _,
+      refine filter.eventually_eq_of_mem (hsx x) _,
+      intros y hy,
+      exact tendsto_nhds_unique (hf' x y hy) (hf₀ y) },
+    use ⟨f₀, hf₀_cont⟩,
+    rw tendsto_compact_open_iff_forall,
+    intros s hs,
+    convert h_pi_f s hs using 1,
+    rw nhds_uniform_on_eq_nhds_uniform_on_iff,
+    intros y hy,
+    exact tendsto_nhds_unique (hf₀ y) (h_pi_f' s hs y hy) }
 end
 
 section functorial
@@ -255,3 +314,20 @@ rfl
 rfl
 
 end homeomorph
+
+section tsum
+variables {α : Type*} {β : Type*}
+variables [topological_space α] [topological_space β] [add_comm_monoid β] [has_continuous_add β]
+
+lemma has_sum_compact_open_iff_forall {ι : Type*} {l : filter ι} (F : ι → C(α, β)) (f : C(α, β)) :
+  has_sum F f
+  ↔ ∀ (s : set α) (hs : is_compact s), @has_sum _ _ _ (uniform_on β s) F f :=
+tendsto_compact_open_iff_forall (λ a : finset ι, a.sum F) f
+
+lemma summable_compact_open_iff_forall [locally_compact_space α] [t2_space β] {ι : Type*}
+  [decidable_eq ι] [nonempty ι] {l : filter ι} (F : ι → C(α, β)) :
+  summable F
+  ↔ ∀ (s : set α) (hs : is_compact s), @summable _ _ _ (uniform_on β s) F :=
+gluing (λ a : finset ι, a.sum F)
+
+end tsum
