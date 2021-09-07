@@ -527,21 +527,6 @@ lemma has_basis_binfi_principal' {ι : Type*} {p : ι → Prop} {s : ι → set 
   (⨅ i (h : p i), 𝓟 (s i)).has_basis p s :=
 filter.has_basis_binfi_principal h ne
 
-lemma has_basis_infi_finite_psigma {ι : Type*} {ι' : ι → Sort*}
-  {l : Π i, filter α} {p : Π i, ι' i → Prop} {s : Π i, ι' i → set α}
-  (h : ∀ i, (l i).has_basis (p i) (s i)) :
-  (⨅ i, l i).has_basis (λ F : Σ' I : set ι, Π i : I , ι' i, finite F.1 ∧ ∀ i : F.1, p i (F.2 i))
-    (λ F, ⋂ i : F.1, s i (F.2 i)) :=
-begin
-  refine ⟨λ s, ⟨_, _⟩⟩,
-  { rw mem_infi, rintro ⟨I, hI, V, hV, rfl⟩,
-    simp only [(h _).mem_iff] at hV, choose f hfp hfV using hV,
-    exact ⟨⟨I, f⟩, ⟨hI, hfp⟩, Inter_subset_Inter hfV⟩ },
-  { rintro ⟨⟨I, f⟩, ⟨hI, hfp⟩, hs⟩,
-    refine mem_infi_of_Inter hI (λ i, _) hs,
-    exact (h i).mem_of_mem (hfp _) }
-end
-
 lemma has_basis.map (f : α → β) (hl : l.has_basis p s) :
   (l.map f).has_basis p (λ i, f '' (s i)) :=
 ⟨λ t, by simp only [mem_map, image_subset_iff, hl.mem_iff, preimage]⟩

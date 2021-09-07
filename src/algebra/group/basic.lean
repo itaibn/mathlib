@@ -451,10 +451,6 @@ by rw [mul_inv_rev, mul_comm]
 lemma div_eq_of_eq_mul' {a b c : G} (h : a = b * c) : a / b = c :=
 by rw [h, div_eq_mul_inv, mul_comm, inv_mul_cancel_left]
 
-@[simp, to_additive]
-lemma mul_div_cancel'_right (a b : G) : a * (b / a) = b :=
-by rw [div_eq_mul_inv, mul_left_comm, mul_inv_self, mul_one]
-
 @[to_additive]
 lemma div_mul_comm (a b c d : G) : a / b * (c / d) = a * c / (b * d) :=
 by rw [div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv, mul_inv_rev, mul_assoc, mul_assoc,
@@ -529,6 +525,10 @@ by rw [sub_eq_iff_eq_add, add_comm]
 @[simp]
 lemma add_sub_cancel' (a b : G) : a + b - a = b :=
 by rw [sub_eq_neg_add, neg_add_cancel_left]
+
+@[simp]
+lemma add_sub_cancel'_right (a b : G) : a + (b - a) = b :=
+by rw [← add_sub_assoc, add_sub_cancel']
 
 -- This lemma is in the `simp` set under the name `add_neg_cancel_comm_assoc`,
 -- defined  in `algebra/group/commute`
