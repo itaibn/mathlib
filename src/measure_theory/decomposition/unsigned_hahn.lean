@@ -78,9 +78,9 @@ begin
       refine (nnreal.tendsto_coe.2 $
         (ennreal.tendsto_to_nnreal $ @ne_top_of_lt _ _ _ ∞ _).comp $ tendsto_measure_Inter hs hm _),
     exact hμ _,
-    exact ⟨0, hμ _⟩,
+    exact ⟨0, (hμ _).ne⟩,
     exact hν _,
-    exact ⟨0, hν _⟩ },
+    exact ⟨0, (hν _).ne⟩ },
 
   have bdd_c : bdd_above c,
   { use (μ univ).to_nnreal,

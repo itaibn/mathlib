@@ -345,7 +345,7 @@ begin
     -- use the previous estimates to see that `f (x + y) - f x - f' y` is small.
     calc ∥f (x + y) - f x - f' y∥
         = ∥(f (x + y) - f x - L e (n e) m y) + (L e (n e) m - f') y∥ :
-      by { congr' 1, simp, abel }
+      by { congr' 1, simp }
     ... ≤ ∥f (x + y) - f x - L e (n e) m y∥ + ∥(L e (n e) m - f') y∥ :
       norm_add_le _ _
     ... ≤ 4 * (1/2) ^ e * ∥y∥ + 12 * ∥c∥ * (1/2) ^ e * ∥y∥ :

@@ -327,7 +327,7 @@ begin
         set.piecewise_eq_indicator, simple_func.coe_piecewise, false_and] using int_f,
     have : (0 : ℝ≥0∞) < ε / c := ennreal.div_pos_iff.2 ⟨εpos.ne', ennreal.coe_ne_top⟩,
     obtain ⟨F, F_closed, Fs, μF⟩ : ∃ F, is_closed F ∧ F ⊆ s ∧ μ s < μ F + ε / c :=
-      hs.exists_lt_is_closed_of_lt_top_of_pos μs_lt_top this,
+      hs.exists_lt_is_closed_of_ne_top_of_pos μs_lt_top.ne this,
     refine ⟨set.indicator F (λ x, c), λ x, _,
       F_closed.upper_semicontinuous_indicator (zero_le _), _⟩,
     { simp only [simple_func.coe_const, simple_func.const_zero, simple_func.coe_zero,
@@ -371,7 +371,7 @@ begin
   obtain ⟨fs, fs_le_f, int_fs⟩ : ∃ (fs : α →ₛ ℝ≥0), (∀ x, fs x ≤ f x) ∧
     (∫⁻ x, f x ∂μ ≤ ∫⁻ x, fs x ∂μ + ε/2) :=
   begin
-    have := ennreal.lt_add_right int_f (ennreal.half_pos εpos),
+    have := ennreal.lt_add_right int_f.ne (ennreal.half_pos εpos),
     conv_rhs at this { rw lintegral_eq_nnreal (λ x, (f x : ℝ≥0∞)) μ },
     erw ennreal.bsupr_add at this; [skip, exact ⟨0, λ x, by simp⟩],
     simp only [lt_supr_iff] at this,

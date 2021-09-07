@@ -1010,13 +1010,13 @@ lemma exists_simple_func_forall_lintegral_sub_lt_of_pos {f : α → ℝ≥0∞} 
     (map coe (ψ - φ)).lintegral μ < ε :=
 begin
   rw lintegral_eq_nnreal at h,
-  have := ennreal.lt_add_right h hε,
+  have := ennreal.lt_add_right h.ne hε,
   erw ennreal.bsupr_add at this; [skip, exact ⟨0, λ x, by simp⟩],
   simp_rw [lt_supr_iff, supr_lt_iff, supr_le_iff] at this,
   rcases this with ⟨φ, hle : ∀ x, ↑(φ x) ≤ f x, b, hbφ, hb⟩,
   refine ⟨φ, hle, λ ψ hψ, _⟩,
   have : (map coe φ).lintegral μ < ∞, from (le_bsupr φ hle).trans_lt h,
-  rw [← add_lt_add_iff_left this, ← add_lintegral, ← map_add @ennreal.coe_add],
+  rw [← add_lt_add_iff_left this.ne, ← add_lintegral, ← map_add @ennreal.coe_add],
   refine (hb _ (λ x, le_trans _ (max_le (hle x) (hψ x)))).trans_lt hbφ,
   norm_cast,
   simp only [add_apply, sub_apply, nnreal.add_sub_eq_max]
@@ -1514,7 +1514,7 @@ lemma lintegral_sub {f g : α → ℝ≥0∞} (hf : measurable f) (hg : measurab
   (hg_fin : ∫⁻ a, g a ∂μ < ∞) (h_le : g ≤ᵐ[μ] f) :
   ∫⁻ a, f a - g a ∂μ = ∫⁻ a, f a ∂μ - ∫⁻ a, g a ∂μ :=
 begin
-  rw [← ennreal.add_left_inj hg_fin,
+  rw [← ennreal.add_left_inj hg_fin.ne,
         ennreal.sub_add_cancel_of_le (lintegral_mono_ae h_le),
       ← lintegral_add (hf.sub hg) hg],
   refine lintegral_congr_ae (h_le.mono $ λ x hx, _),
@@ -1529,7 +1529,7 @@ lemma lintegral_infi_ae
 have fn_le_f0 : ∫⁻ a, ⨅n, f n a ∂μ ≤ ∫⁻ a, f 0 a ∂μ, from
   lintegral_mono (assume a, infi_le_of_le 0 (le_refl _)),
 have fn_le_f0' : (⨅n, ∫⁻ a, f n a ∂μ) ≤ ∫⁻ a, f 0 a ∂μ, from infi_le_of_le 0 (le_refl _),
-(ennreal.sub_right_inj h_fin fn_le_f0 fn_le_f0').1 $
+(ennreal.sub_right_inj h_fin.ne fn_le_f0 fn_le_f0').1 $
 show ∫⁻ a, f 0 a ∂μ - ∫⁻ a, ⨅n, f n a ∂μ = ∫⁻ a, f 0 a ∂μ - (⨅n, ∫⁻ a, f n a ∂μ), from
 calc
   ∫⁻ a, f 0 a ∂μ - (∫⁻ a, ⨅n, f n a ∂μ) = ∫⁻ a, f 0 a - ⨅n, f n a ∂μ:

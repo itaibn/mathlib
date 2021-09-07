@@ -536,7 +536,7 @@ of_map_split_add
     rcases eq_or_ne j i with rfl|hne,
     { simp },
     { simp only [face_split_lower_get_of_ne _ hne, face_split_upper_get_of_ne _ hne,
-        update_noteq hne.symm, sub_add_sub],
+        update_noteq hne.symm, sub_add_comm],
       have : J.face i ≤ I₀.face i, from face_mono hJ i,
       rw le_iff_Icc at hJ,
       simp only [hf (J.upper i) ⟨(hJ J.upper_mem_Icc).1 i, (hJ J.upper_mem_Icc).2 i⟩,

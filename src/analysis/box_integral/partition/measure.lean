@@ -24,10 +24,10 @@ end
 
 lemma measurable_set_Icc : measurable_set I.Icc := measurable_set_Icc
 
-lemma measure_Icc_lt_top (μ : measure (ι → ℝ)) [locally_finite_measure μ] : μ I.Icc < ∞ :=
-@is_compact.finite_measure _ _ _ μ _ _ (is_compact_pi_Icc I.lower I.upper)
+lemma measure_Icc_lt_top (μ : measure (ι → ℝ)) [is_locally_finite_measure μ] : μ I.Icc < ∞ :=
+@is_compact.is_finite_measure _ _ _ μ _ _ (is_compact_pi_Icc I.lower I.upper)
 
-lemma measure_coe_lt_top (μ : measure (ι → ℝ)) [locally_finite_measure μ] : μ I < ∞ :=
+lemma measure_coe_lt_top (μ : measure (ι → ℝ)) [is_locally_finite_measure μ] : μ I < ∞ :=
 (measure_mono $ coe_subset_Icc).trans_lt (I.measure_Icc_lt_top μ)
 
 end box
@@ -40,7 +40,7 @@ namespace measure_theory
 
 namespace measure
 
-@[simps] def to_box_additive (μ : measure (ι → ℝ)) [locally_finite_measure μ] :
+@[simps] def to_box_additive (μ : measure (ι → ℝ)) [is_locally_finite_measure μ] :
   ι →ᵇᵃ[⊤] ℝ :=
 { to_fun := λ J, (μ J).to_real,
   sum_partition_boxes' := λ J hJ π hπ,

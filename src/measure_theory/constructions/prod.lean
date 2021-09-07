@@ -153,7 +153,7 @@ begin
   { rintro _ ⟨s, t, hs, ht, rfl⟩, simp only [mk_preimage_prod_right_eq_if, measure_if],
     exact measurable_const.indicator hs },
   { intros t ht h2t,
-    simp_rw [preimage_compl, measure_compl (measurable_prod_mk_left ht) (measure_lt_top ν _)],
+    simp_rw [preimage_compl, measure_compl (measurable_prod_mk_left ht) (measure_ne_top ν _)],
     exact h2t.const_sub _ },
   { intros f h1f h2f h3f, simp_rw [preimage_Union],
     have : ∀ b, ν (⋃ i, prod.mk b ⁻¹' f i) = ∑' i, ν (prod.mk b ⁻¹' f i) :=

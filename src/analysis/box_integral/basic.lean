@@ -240,7 +240,7 @@ lemma integrable_const (c : E) : integrable I l (λ _, c) vol :=
 open measure_theory
 
 lemma integral_nonneg {g : (ι → ℝ) → ℝ} (hg : ∀ x ∈ I.Icc, 0 ≤ g x)
-  (μ : measure (ι → ℝ)) [locally_finite_measure μ] :
+  (μ : measure (ι → ℝ)) [is_locally_finite_measure μ] :
   0 ≤ integral I l g μ.to_box_additive.to_smul :=
 begin
   by_cases hgi : integrable I l g μ.to_box_additive.to_smul,
@@ -250,7 +250,7 @@ begin
 end
 
 lemma norm_integral_le_of_norm_le {g : (ι → ℝ) → ℝ} (hle : ∀ x ∈ I.Icc, ∥f x∥ ≤ g x)
-  (μ : measure (ι → ℝ)) [locally_finite_measure μ]
+  (μ : measure (ι → ℝ)) [is_locally_finite_measure μ]
   (hg : integrable I l g μ.to_box_additive.to_smul) :
   ∥(integral I l f μ.to_box_additive.to_smul : E)∥ ≤
     integral I l g μ.to_box_additive.to_smul :=
@@ -266,7 +266,7 @@ begin
 end
 
 lemma norm_integral_le_of_le_const {c : ℝ} (hc : ∀ x ∈ I.Icc, ∥f x∥ ≤ c)
-  (μ : measure (ι → ℝ)) [locally_finite_measure μ] :
+  (μ : measure (ι → ℝ)) [is_locally_finite_measure μ] :
   ∥(integral I l f μ.to_box_additive.to_smul : E)∥ ≤ (μ I).to_real * c :=
 by simpa only [integral_const]
   using norm_integral_le_of_norm_le hc μ (integrable_const c)
@@ -442,7 +442,7 @@ open measure_theory
 variable (l)
 
 lemma integrable_of_continuous_on [fintype ι] [complete_space E] {I : box ι} {f : (ι → ℝ) → E}
-  (hc : continuous_on f I.Icc) (μ : measure (ι → ℝ)) [locally_finite_measure μ] :
+  (hc : continuous_on f I.Icc) (μ : measure (ι → ℝ)) [is_locally_finite_measure μ] :
   @integrable ι E E _ _ _ _ _ I l f μ.to_box_additive.to_smul :=
 begin
   have huc := (is_compact_pi_Icc I.lower I.upper).uniform_continuous_on_of_continuous hc,
