@@ -2,13 +2,11 @@ import analysis.box_integral.basic
 
 open_locale classical nnreal ennreal
 
-namespace box_integral
-
-open measure_theory metric set
-
 variables {ι E : Type*} [fintype ι] [normed_group E] [normed_space ℝ E]
 
-lemma has_integral_indicator_const {l : integration_filter} (hl : l.bRiemann = ff)
+open measure_theory metric set box_integral
+
+lemma box_integral.has_integral_indicator_const {l : integration_filter} (hl : l.bRiemann = ff)
   {s : set (ι → ℝ)} (hs : measurable_set s) (I : box ι) (y : E)
   (μ : measure (ι → ℝ)) [locally_finite_measure μ] :
   @has_integral ι E E _ _ _ _ _ I l (s.indicator (λ _, y)) μ.to_box_additive.to_smul
@@ -25,4 +23,6 @@ begin
     (ennreal.coe_pos.2 δ0) with ⟨K, U, hKc, hUo, hKs, hsU, hμKU⟩,
 end
 
-end box_integral
+lemma measure_theory.simple_func.has_box_integral (f : simple_fun (ι → ℝ) E) (I : box ι)
+  (μ : measure (ι → ℝ)) [locally_finite_measure μ] :
+  has_integral

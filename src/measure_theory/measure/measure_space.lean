@@ -176,6 +176,12 @@ begin
   rw [← measure_union disjoint_diff h₂ (h₁.diff h₂), union_diff_cancel h]
 end
 
+lemma le_measure_diff : μ s₁ - μ s₂ ≤ μ (s₁ \ s₂) :=
+ennreal.sub_le_iff_le_add'.2 $
+calc μ s₁ ≤ μ (s₂ ∪ s₁)        : measure_mono (subset_union_right _ _)
+      ... = μ (s₂ ∪ s₁ \ s₂)   : congr_arg μ union_diff_self.symm
+      ... ≤ μ s₂ + μ (s₁ \ s₂) : measure_union_le _ _
+
 lemma meas_eq_meas_of_null_diff {s t : set α}
   (hst : s ⊆ t) (h_nulldiff : μ (t.diff s) = 0) : μ s = μ t :=
 by { rw [←diff_diff_cancel_left hst, ←@measure_diff_null _ _ _ t _ h_nulldiff], refl, }
@@ -969,7 +975,7 @@ alias ext_iff_of_sUnion_eq_univ ↔ _ measure_theory.measure.ext_of_sUnion_eq_un
 lemma ext_of_generate_from_of_cover {S T : set (set α)}
   (h_gen : ‹_› = generate_from S) (hc : countable T)
   (h_inter : is_pi_system S)
-  (hm : ∀ t ∈ T, measurable_set t) (hU : ⋃₀ T = univ) (htop : ∀ t ∈ T, μ t < ∞)
+  (hm : ∀ t ∈ T, measurable_set t) (hU : ⋃₀ T = univ) (htop : ∀ t ∈ T, μ t ≠ ∞)
   (ST_eq : ∀ (t ∈ T) (s ∈ S), μ (s ∩ t) = ν (s ∩ t)) (T_eq : ∀ t ∈ T, μ t = ν t) :
   μ = ν :=
 begin
@@ -983,7 +989,7 @@ begin
     rw [set.inter_comm] at hvt ⊢,
     rwa [measure_eq_inter_diff (hm _ ht) hv, measure_eq_inter_diff (hm _ ht) hv, ← hvt,
       ennreal.add_right_inj] at this,
-    exact (measure_mono $ set.inter_subset_left _ _).trans_lt (htop t ht) },
+    exact ne_top_of_le_ne_top (htop t ht) (measure_mono $ set.inter_subset_left _ _) },
   { intros f hfd hfm h_eq,
     have : pairwise (disjoint on λ n, f n ∩ t) :=
       λ m n hmn, (hfd m n hmn).mono (inter_subset_left _ _) (inter_subset_left _ _),
@@ -996,7 +1002,7 @@ end
 lemma ext_of_generate_from_of_cover_subset {S T : set (set α)}
   (h_gen : ‹_› = generate_from S)
   (h_inter : is_pi_system S)
-  (h_sub : T ⊆ S) (hc : countable T) (hU : ⋃₀ T = univ) (htop : ∀ s ∈ T, μ s < ∞)
+  (h_sub : T ⊆ S) (hc : countable T) (hU : ⋃₀ T = univ) (htop : ∀ s ∈ T, μ s ≠ ∞)
   (h_eq : ∀ s ∈ S, μ s = ν s) :
   μ = ν :=
 begin
@@ -1013,7 +1019,7 @@ end
   `finite_spanning_sets_in.ext` is a reformulation of this lemma. -/
 lemma ext_of_generate_from_of_Union (C : set (set α)) (B : ℕ → set α)
   (hA : ‹_› = generate_from C) (hC : is_pi_system C) (h1B : (⋃ i, B i) = univ)
-  (h2B : ∀ i, B i ∈ C) (hμB : ∀ i, μ (B i) < ∞) (h_eq : ∀ s ∈ C, μ s = ν s) : μ = ν :=
+  (h2B : ∀ i, B i ∈ C) (hμB : ∀ i, μ (B i) ≠ ∞) (h_eq : ∀ s ∈ C, μ s = ν s) : μ = ν :=
 begin
   refine ext_of_generate_from_of_cover_subset hA hC _ (countable_range B) h1B _ h_eq,
   { rintro _ ⟨i, rfl⟩, apply h2B },
@@ -1834,7 +1840,7 @@ protected lemma sigma_finite (h : μ.finite_spanning_sets_in C) (hC : ∀ s ∈ 
 `finite_spanning_sets_in`. -/
 protected lemma ext {ν : measure α} {C : set (set α)} (hA : ‹_› = generate_from C)
   (hC : is_pi_system C) (h : μ.finite_spanning_sets_in C) (h_eq : ∀ s ∈ C, μ s = ν s) : μ = ν :=
-ext_of_generate_from_of_Union C _ hA hC h.spanning h.set_mem h.finite h_eq
+ext_of_generate_from_of_Union C _ hA hC h.spanning h.set_mem (λ _, (h.finite _).ne) h_eq
 
 protected lemma is_countably_spanning (h : μ.finite_spanning_sets_in C) : is_countably_spanning C :=
 ⟨_, h.set_mem, h.spanning⟩
@@ -1967,8 +1973,8 @@ begin
   refine induction_on_inter hA hC (by simp) hμν _ _ hs,
   { intros t h1t h2t,
     have h1t_ : @measurable_set α m₀ t, from h _ h1t,
-    rw [@measure_compl α m₀ μ t h1t_ (@measure_lt_top α m₀ μ _ t),
-      @measure_compl α m₀ ν t h1t_ (@measure_lt_top α m₀ ν _ t), h_univ, h2t], },
+    rw [@measure_compl α m₀ μ t h1t_ (@measure_ne_top α m₀ μ _ t),
+      @measure_compl α m₀ ν t h1t_ (@measure_ne_top α m₀ ν _ t), h_univ, h2t], },
   { intros f h1f h2f h3f,
     have h2f_ : ∀ (i : ℕ), @measurable_set α m₀ (f i), from (λ i, h _ (h2f i)),
     have h_Union : @measurable_set α m₀ (⋃ (i : ℕ), f i),from @measurable_set.Union α ℕ m₀ _ f h2f_,
@@ -2100,7 +2106,7 @@ begin
     begin
       intros g h_meas h_disj, simp only, rw ennreal.tsum_sub,
       repeat { rw ← measure_theory.measure_Union h_disj h_meas },
-      apply measure_theory.measure_lt_top, intro i, apply h₂, apply h_meas
+      exacts [measure_theory.measure_ne_top _ _, λ i, h₂ _ (h_meas _)]
     end,
   -- Now, we demonstrate `μ - ν = measure_sub`, and apply it.
   begin

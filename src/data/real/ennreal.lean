@@ -472,10 +472,13 @@ by simpa only [pos_iff_ne_zero] using ennreal.pow_pos
 @[simp] lemma not_lt_zero : ¬ a < 0 := by simp
 
 lemma add_lt_add_iff_left (ha : a ≠ ∞) : a + c < a + b ↔ c < b :=
-with_top.add_lt_add_iff_left (lt_top_iff_ne_top.2 ha)
+with_top.add_lt_add_iff_left ha
 
 lemma add_lt_add_iff_right (ha : a ≠ ∞) : c + a < b + a ↔ c < b :=
-with_top.add_lt_add_iff_right (lt_top_iff_ne_top.2 ha)
+with_top.add_lt_add_iff_right ha
+
+instance contravariant_class_add_lt : contravariant_class ℝ≥0∞ ℝ≥0∞ (+) (<) :=
+with_top.contravariant_class_add_lt
 
 lemma lt_add_right (ha : a ≠ ∞) (hb : 0 < b) : a < a + b :=
 by rwa [← add_lt_add_iff_left ha, add_zero] at hb
@@ -728,9 +731,13 @@ lemma sub_eq_of_add_eq : b ≠ ∞ → a + b = c → c - b = a :=
 protected lemma sub_le_of_sub_le (h : a - b ≤ c) : a - c ≤ b :=
 ennreal.sub_le_iff_le_add.2 $ ennreal.sub_le_iff_le_add'.1 h
 
-protected lemma lt_add_of_sub_lt (hb : b ≠ ∞) (h : a - b < c) : a < c + b :=
-calc a ≤ (a - b) + b : le_sub_add_self
-   ... < c + b : (add_lt_add_iff_right hb).2 h
+protected lemma lt_add_of_sub_lt (ht : a ≠ ∞ ∨ b ≠ ∞) (h : a - b < c) : a < c + b :=
+begin
+  rcases eq_or_ne b ∞ with rfl|hb,
+  { rw [add_top, lt_top_iff_ne_top], exact ht.resolve_right (not_not.2 rfl) },
+  { calc a ≤ (a - b) + b : le_sub_add_self
+     ... < c + b : (add_lt_add_iff_right hb).2 h }
+end
 
 protected lemma sub_lt_of_lt_add (hac : c ≤ a) (h : a < b + c) : a - c < b :=
 begin
@@ -743,7 +750,7 @@ begin
 end
 
 protected lemma sub_lt_iff_lt_add (hb : b ≠ ∞) (hab : b ≤ a) : a - b < c ↔ a < c + b :=
-⟨ennreal.lt_add_of_sub_lt hb, ennreal.sub_lt_of_lt_add hab⟩
+⟨ennreal.lt_add_of_sub_lt (or.inr hb), ennreal.sub_lt_of_lt_add hab⟩
 
 protected lemma sub_lt_self (hat : a ≠ ∞) (h0 : a ≠ 0) (hb : 0 < b) : a - b < a :=
 (le_total b a).elim (λ hba, ennreal.sub_lt_of_lt_add hba (lt_add_right hat hb))
@@ -771,13 +778,8 @@ ennreal.sub_le_iff_le_add.2 $ le_self_add
 @[simp] lemma sub_zero : a - 0 = a :=
 eq.trans (add_zero (a - 0)).symm $ by simp
 
-lemma sub_lt_of_sub_lt (h₁ : a - b < c) (h₂ : c ≤ a) (h₃ : a ≠ ∞ ∨ b ≠ ∞) : a - c < b :=
-begin
-  rcases eq_or_ne b ∞ with rfl|hb,
-  { have ha : a ≠ ∞, from h₃.resolve_right (not_not.2 rfl),
-    exact (ennreal.sub_le_self _ _).trans_lt (lt_top_iff_ne_top.2 ha) },
-  { exact ennreal.sub_lt_of_lt_add h₂ (add_comm c b ▸ ennreal.lt_add_of_sub_lt hb h₁) }
-end
+lemma sub_lt_of_sub_lt (h₂ : c ≤ a) (h₃ : a ≠ ∞ ∨ b ≠ ∞) (h₁ : a - b < c) : a - c < b :=
+ennreal.sub_lt_of_lt_add h₂ (add_comm c b ▸ ennreal.lt_add_of_sub_lt h₃ h₁)
 
 /-- A version of triangle inequality for difference as a "distance". -/
 lemma sub_le_sub_add_sub : a - c ≤ a - b + (b - c) :=
