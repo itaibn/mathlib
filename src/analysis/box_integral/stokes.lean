@@ -104,7 +104,7 @@ begin
   have Hi : ∀ x ∈ Icc (I.lower i) (I.upper i),
     @integrable ({i}ᶜ : set ι) E E _ _ _ _ _ (I.face i) ⊥ (f ∘ pi_insert_one i x)
       (volume : measure (({i}ᶜ : set ι) → ℝ)).to_box_additive.to_smul,
-    from λ x hx, integrable_of_continuous_on (continuous_on_face_Icc _ hfc _ _ hx) volume,
+    from λ x hx, integrable_of_continuous_on _ (continuous_on_face_Icc _ hfc _ _ hx) volume,
   rw [← integral_sub (Hi _ Hu) (Hi _ Hl), ← box.volume_face_mul i, mul_smul,
     ← box_additive_map.to_smul_apply, ← integral_const,
     ← integral_sub (integrable_const _) ((Hi _ Hu).sub (Hi _ Hl)), measure.to_box_additive_apply],

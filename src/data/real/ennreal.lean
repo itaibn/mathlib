@@ -386,12 +386,19 @@ lemma mul_self_lt_top_iff {a : ℝ≥0∞} : a * a < ⊤ ↔ a < ⊤ :=
 by { rw [ennreal.mul_lt_top_iff, and_self, or_self, or_iff_left_iff_imp], rintro rfl, norm_num }
 
 @[simp] lemma mul_pos : 0 < a * b ↔ 0 < a ∧ 0 < b :=
-by simp only [pos_iff_ne_zero, ne.def, mul_eq_zero, not_or_distrib]
+canonically_ordered_comm_semiring.mul_pos
 
-lemma pow_eq_top : ∀ n:ℕ, a^n=∞ → a=∞
-| 0 := by simp
-| (n+1) := λ o, by { rw pow_succ at o,
-                     exact (mul_eq_top.1 o).elim (λ h, pow_eq_top n h.2) and.left }
+@[simp] lemma pow_eq_top_iff {n : ℕ} : a ^ n = ∞ ↔ a = ∞ ∧ n ≠ 0 :=
+begin
+  induction n with n ihn, { simp },
+  rw [pow_succ, mul_eq_top, ihn],
+  fsplit,
+  { rintro (⟨-,rfl,h0⟩|⟨rfl,h0⟩); exact ⟨rfl, n.succ_ne_zero⟩ },
+  { rintro ⟨rfl, -⟩, exact or.inr ⟨rfl, pow_ne_zero n top_ne_zero⟩ }
+end
+
+lemma pow_eq_top (n : ℕ) (h : a ^ n = ∞) : a = ∞ :=
+(pow_eq_top_iff.1 h).1
 
 lemma pow_ne_top (h : a ≠ ∞) {n:ℕ} : a^n ≠ ∞ :=
 mt (pow_eq_top n) h
@@ -966,6 +973,8 @@ by rw [coe_inv (ne_of_gt _root_.zero_lt_two), coe_two]
 @[simp, norm_cast] lemma coe_div (hr : r ≠ 0) : (↑(p / r) : ℝ≥0∞) = p / r :=
 by rw [div_eq_mul_inv, div_eq_mul_inv, coe_mul, coe_inv hr]
 
+lemma div_zero (h : a ≠ 0) : a / 0 = ∞ := by simp [div_eq_mul_inv, h]
+
 @[simp] lemma inv_one : (1:ℝ≥0∞)⁻¹ = 1 :=
 by simpa only [coe_inv one_ne_zero, coe_one] using coe_eq_coe.2 inv_one
 
@@ -1301,6 +1310,12 @@ begin
   lift b to ℝ≥0 using ne_top_of_le_ne_top ha h,
   lift a to ℝ≥0 using ha,
   simp only [← ennreal.coe_sub, ennreal.coe_to_real, nnreal.coe_sub (ennreal.coe_le_coe.mp h)],
+end
+
+lemma le_to_real_sub {a b : ℝ≥0∞} (hb : b ≠ ∞) : a.to_real - b.to_real ≤ (a - b).to_real :=
+begin
+  lift b to ℝ≥0 using hb,
+  cases a; simp [none_eq_top, some_eq_coe, ← coe_sub, nnreal.sub_def] at *
 end
 
 lemma to_real_add_le : (a+b).to_real ≤ a.to_real + b.to_real :=

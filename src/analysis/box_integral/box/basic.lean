@@ -145,6 +145,8 @@ lemma Icc_def : I.Icc = Icc I.lower I.upper := rfl
 @[simp] lemma upper_mem_Icc (I : box ι) : I.upper ∈ I.Icc := right_mem_Icc.2 I.lower_le_upper
 @[simp] lemma lower_mem_Icc (I : box ι) : I.lower ∈ I.Icc := left_mem_Icc.2 I.lower_le_upper
 
+protected lemma is_compact_Icc : is_compact I.Icc := is_compact_pi_Icc I.lower I.upper
+
 lemma Icc_eq_pi : I.Icc = pi univ (λ i, Icc (I.lower i) (I.upper i)) := (pi_univ_Icc _ _).symm
 
 lemma le_iff_Icc : I ≤ J ↔ I.Icc ⊆ J.Icc := (le_tfae I J).out 0 2

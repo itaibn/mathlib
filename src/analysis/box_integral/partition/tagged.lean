@@ -62,6 +62,16 @@ def is_partition := π.to_prepartition.is_partition
 lemma is_partition_iff_Union_eq : is_partition π ↔ π.Union = I :=
 prepartition.is_partition_iff_Union_eq
 
+@[simps { fully_applied := ff }] def filter (p : box ι → Prop) : tagged_prepartition I :=
+⟨π.1.filter p, π.2, π.3⟩
+
+@[simp] lemma mem_filter {p : box ι → Prop} : J ∈ π.filter p ↔ J ∈ π ∧ p J :=
+finset.mem_filter
+
+@[simp] lemma Union_filter_not (π : tagged_prepartition I) (p : box ι → Prop) :
+  (π.filter (λ J, ¬p J)).Union = π.Union \ (π.filter p).Union :=
+π.to_prepartition.Union_filter_not p
+
 end tagged_prepartition
 
 namespace prepartition
@@ -183,10 +193,15 @@ lemma is_subordinate.inf_prepartition [fintype ι] {r : (ι → ℝ) → ℝ}
   (h : is_subordinate π r) (π' : prepartition I) : is_subordinate (π.inf_prepartition π') r :=
 h.bUnion_prepartition _
 
-lemma is_subordinate.mono [fintype ι] {π : tagged_prepartition I} {r r' : (ι → ℝ) → ℝ}
-  (h : ∀ x ∈ I.Icc, r x ≤ r' x) (hr : π.is_subordinate r) :
+lemma is_subordinate.mono' [fintype ι] {π : tagged_prepartition I} {r r' : (ι → ℝ) → ℝ}
+  (hr : π.is_subordinate r) (h : ∀ J ∈ π, r (π.tag J) ≤ r' (π.tag J)) :
   π.is_subordinate r' :=
-λ J hJ x hx, closed_ball_subset_closed_ball (h _ $ π.tag_mem_Icc _) (hr _ hJ hx)
+λ J hJ x hx, closed_ball_subset_closed_ball (h _ hJ) (hr _ hJ hx)
+
+lemma is_subordinate.mono [fintype ι] {π : tagged_prepartition I} {r r' : (ι → ℝ) → ℝ}
+  (hr : π.is_subordinate r) (h : ∀ x ∈ I.Icc, r x ≤ r' x) :
+  π.is_subordinate r' :=
+hr.mono' $ λ J _, h _ $ π.tag_mem_Icc J
 
 lemma is_subordinate.nonneg [fintype ι] {π : tagged_prepartition I} {r : (ι → ℝ) → ℝ}
   (h : π.is_subordinate r) (hJ : J ∈ π) : 0 ≤ r (π.tag J) :=
@@ -302,6 +317,10 @@ lemma is_partition_union_compl_get (h : π₂.Union = I \ π₁.Union) :
   is_partition ((π₁.union_compl π₂).get h) :=
 prepartition.is_partition_union_compl_get h
 
+@[simp] lemma Union_union_compl_get (h : π₂.Union = I \ π₁.Union) :
+  ((π₁.union_compl π₂).get h).Union = I :=
+(is_partition_union_compl_get h).Union_eq
+
 lemma is_subordinate.union_compl [fintype ι] {r} (h₁ : is_subordinate π₁ r)
   (h₂ : is_subordinate π₂ r) (h : π₂.Union = I \ π₁.Union) :
   is_subordinate ((π₁.union_compl π₂).get h) r :=
@@ -358,6 +377,9 @@ lemma distortion_of_const {c} (h₁ : π.boxes.nonempty) (h₂ : ∀ J ∈ π, b
 @[simp] lemma distortion_single (hJ : J ≤ I) (h : x ∈ I.Icc) :
   distortion (single I J hJ x h) = J.distortion :=
 sup_singleton
+
+lemma distortion_filter_le (p : box ι → Prop) : (π.filter p).distortion ≤ π.distortion :=
+sup_mono (filter_subset _ _)
 
 end distortion
 

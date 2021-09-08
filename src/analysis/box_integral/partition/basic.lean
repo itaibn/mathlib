@@ -163,6 +163,8 @@ protected def Union : set (ι → ℝ) := ⋃ J ∈ π, ↑J
 
 lemma Union_def : π.Union = ⋃ J ∈ π, ↑J := rfl
 
+lemma Union_def' : π.Union = ⋃ J ∈ π.boxes, ↑J := rfl
+
 @[simp] lemma mem_Union : x ∈ π.Union ↔ ∃ J ∈ π, x ∈ J := set.mem_bUnion_iff
 
 @[simp] lemma Union_single (h : J ≤ I) : (single I J h).Union = J := by simp [Union_def]
@@ -415,7 +417,7 @@ instance : semilattice_inf_top (prepartition I) :=
 instance : semilattice_inf_bot (prepartition I) :=
 { .. prepartition.order_bot, .. prepartition.semilattice_inf_top }
 
-@[simps { fully_applied := tt }]
+@[simps]
 def filter (π : prepartition I) (p : box ι → Prop) : prepartition I :=
 { boxes := π.boxes.filter p,
   le_of_mem' := λ J hJ, π.le_of_mem (mem_filter.1 hJ).1,
@@ -437,6 +439,10 @@ begin
   { ext J x, simp { contextual := tt } },
   { convert π.pairwise_disjoint, simp }
 end
+
+lemma sum_fiberwise {α M} [add_comm_monoid M] (π : prepartition I) (f : box ι → α) (g : box ι → M) :
+  ∑ y in π.boxes.image f, ∑ J in (π.filter (λ J, f J = y)).boxes, g J = ∑ J in π.boxes, g J :=
+by convert sum_fiberwise_of_maps_to (λ _, finset.mem_image_of_mem f) g
 
 def disj_union (π₁ : prepartition I) : prepartition I →. prepartition I := λ π₂,
 { dom := disjoint π₁.Union π₂.Union,

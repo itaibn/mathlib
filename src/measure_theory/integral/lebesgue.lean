@@ -113,6 +113,10 @@ theorem const_apply (a : α) (b : β) : (const α b) a = b := rfl
   (const α b).range = {b} :=
 finset.coe_injective $ by simp
 
+lemma range_const_subset (α) [measurable_space α] (b : β) :
+  (const α b).range ⊆ {b} :=
+finset.coe_subset.1 $ by simp
+
 lemma measurable_set_cut (r : α → β → Prop) (f : α →ₛ β)
   (h : ∀b, measurable_set {a | r a b}) : measurable_set {a | r a (f a)} :=
 begin
@@ -882,7 +886,7 @@ of a characteristic function, and that this multiple doesn't appear in the image
 @[elab_as_eliminator]
 protected lemma induction {α γ} [measurable_space α] [add_monoid γ] {P : simple_func α γ → Prop}
   (h_ind : ∀ c {s} (hs : measurable_set s),
-    P (simple_func.piecewise s hs (simple_func.const _ c) (simple_func.const _ 0)))
+    P (simple_func.piecewise s hs (simple_func.const _ c) 0))
   (h_add : ∀ ⦃f g : simple_func α γ⦄, disjoint (support f) (support g) → P f → P g → P (f + g))
   (f : simple_func α γ) : P f :=
 begin

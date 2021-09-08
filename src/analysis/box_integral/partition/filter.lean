@@ -12,26 +12,15 @@ noncomputable theory
 
 namespace box_integral
 
-variables {ι : Type*} [fintype ι] {I J : box ι} {c : ℝ≥0} {r : (ι → ℝ) → ℝ}
+variables {ι : Type*} [fintype ι] {I J : box ι} {c c₁ c₂ : ℝ≥0} {r r₁ r₂ : (ι → ℝ) → ℝ}
+  {π π₁ π₂ : tagged_prepartition I}
 
-namespace tagged_prepartition
-
-def union_subordinate_compl (π : tagged_prepartition I) (r : (ι → ℝ) → ℝ) :
-  tagged_prepartition I :=
-(π.union_compl (π.to_prepartition.compl.to_subordinate r)).get (show _ = _, by simp)
-
-@[simp] lemma distortion_union_subordinate_compl (π : tagged_prepartition I) (r : (ι → ℝ) → ℝ) :
-  (π.union_subordinate_compl r).distortion = max π.distortion π.to_prepartition.compl.distortion :=
-finset.sup_union.trans $ congr_arg (max _) $ prepartition.distortion_to_subordinate _ _
-
-lemma is_partition_union_subordinate_compl (π : tagged_prepartition I) (r : (ι → ℝ) → ℝ) :
-  is_partition (π.union_subordinate_compl r) :=
-is_partition_union_compl_get _
-
-end tagged_prepartition
+open tagged_prepartition
 
 @[ext] structure integration_filter : Type :=
 (bRiemann bHenstock bDistortion : bool)
+
+variables {l l₁ l₂ : integration_filter}
 
 namespace integration_filter
 
@@ -54,17 +43,19 @@ instance : bounded_lattice integration_filter :=
   top := ⟨tt, ff, ff⟩,
   le_top := λ l, ⟨le_tt, ff_le, ff_le⟩ }
 
-def to_set (l : integration_filter) (I : box ι) (c : ℝ≥0) (r : (ι → ℝ) → ℝ) :
-  set (tagged_prepartition I) :=
-{π | π.is_subordinate r ∧ (l.bHenstock → π.is_Henstock) ∧
-  (l.bDistortion → π.distortion ≤ c ∧ π.to_prepartition.compl.distortion ≤ c)}
+@[protect_proj] structure mem_base_set (l : integration_filter) (I : box ι) (c : ℝ≥0)
+  (r : (ι → ℝ) → ℝ) (π : tagged_prepartition I) : Prop :=
+(is_subordinate : π.is_subordinate r)
+(is_Henstock : l.bHenstock → π.is_Henstock)
+(distortion_le : l.bDistortion → π.distortion ≤ c)
+(exists_compl : l.bDistortion → ∃ π' : prepartition I, π'.Union = I \ π.Union ∧ π'.distortion ≤ c)
 
 def r_cond (l : integration_filter) (I : box ι) (r : (ι → ℝ) → ℝ) : Prop :=
 (∀ x ∈ I.Icc, 0 < r x) ∧ ∀ x ∈ I.Icc, l.bRiemann → r x = r I.upper
 
 def to_filter_distortion (l : integration_filter) (I : box ι) (c : ℝ≥0) :
   filter (tagged_prepartition I) :=
-⨅ (r : (ι → ℝ) → ℝ) (hr : l.r_cond I r), 𝓟 (l.to_set I c r)
+⨅ (r : (ι → ℝ) → ℝ) (hr : l.r_cond I r), 𝓟 {π | l.mem_base_set I c r π}
 
 def to_filter (l : integration_filter) (I : box ι) :
   filter (tagged_prepartition I) :=
@@ -85,59 +76,97 @@ lemma r_cond_of_bRiemann_eq_ff (l : integration_filter) (hl : l.bRiemann = ff) :
   l.r_cond I r ↔ ∀ x ∈ I.Icc, 0 < r x :=
 by simp [r_cond, hl]
 
-@[mono] lemma to_set_mono (I : box ι) {l₁ l₂ : integration_filter} (h : l₁ ≤ l₂)
-  {c₁ c₂ : ℝ≥0} (hc : c₁ ≤ c₂) {r₁ r₂ : (ι → ℝ) → ℝ} (hr : ∀ x ∈ I.Icc, r₁ x ≤ r₂ x) :
-  l₁.to_set I c₁ r₁ ⊆ l₂.to_set I c₂ r₂ :=
-λ π ⟨hr', hH, hd⟩, ⟨hr'.mono hr, λ h₂, hH (le_iff_imp.1 h.2.1 h₂),
-  λ h₃, (hd (le_iff_imp.1 h.2.2 h₃)).imp (λ h, h.trans hc) (λ h, h.trans hc)⟩
+lemma mem_base_set.mono' (I : box ι) (h : l₁ ≤ l₂) (hc : c₁ ≤ c₂) {π : tagged_prepartition I}
+  (hr : ∀ J ∈ π, r₁ (π.tag J) ≤ r₂ (π.tag J)) (hπ : l₁.mem_base_set I c₁ r₁ π) :
+  l₂.mem_base_set I c₂ r₂ π :=
+⟨hπ.1.mono' hr, λ h₂, hπ.2 (le_iff_imp.1 h.2.1 h₂),
+  λ hD, (hπ.3 (le_iff_imp.1 h.2.2 hD)).trans hc,
+  λ hD, (hπ.4 (le_iff_imp.1 h.2.2 hD)).imp $ λ π hπ, ⟨hπ.1, hπ.2.trans hc⟩⟩
 
-lemma union_subordinate_compl_mem_to_set {l : integration_filter} {c : ℝ≥0} {r₁ r₂ : (ι → ℝ) → ℝ}
-  (hr₁ : ∀ x ∈ I.Icc, 0 < r₁ x) (hr₂ : ∀ x ∈ I.Icc, r₁ x ≤ r₂ x) {π : tagged_prepartition I}
-  (hπ : π ∈ l.to_set I c r₂) :
-  π.union_subordinate_compl r₁ ∈ l.to_set I c r₂ :=
+@[mono] lemma mem_base_set.mono (I : box ι) (h : l₁ ≤ l₂) (hc : c₁ ≤ c₂) {π : tagged_prepartition I}
+  (hr : ∀ x ∈ I.Icc, r₁ x ≤ r₂ x) (hπ : l₁.mem_base_set I c₁ r₁ π) :
+  l₂.mem_base_set I c₂ r₂ π :=
+hπ.mono' I h hc $ λ J hJ, hr _ $ π.tag_mem_Icc J
+
+lemma mem_base_set.exists_common_compl (h₁ : l.mem_base_set I c₁ r₁ π₁)
+  (h₂ : l.mem_base_set I c₂ r₂ π₂) (hU : π₁.Union = π₂.Union) :
+  ∃ π : prepartition I, π.Union = I \ π₁.Union ∧
+    (l.bDistortion → π.distortion ≤ c₁) ∧ (l.bDistortion → π.distortion ≤ c₂) :=
 begin
-  refine ⟨hπ.1.union_compl ((prepartition.is_subordinate_to_subordinate _ hr₁).mono hr₂) _,
-    λ hH, ((hπ.2.1 hH).union_compl (prepartition.is_Henstock_to_subordinate _ _) _),
-    λ hd, _⟩,
-  rw [π.distortion_union_subordinate_compl,
-    (π.is_partition_union_subordinate_compl _).compl_eq_bot, prepartition.distortion_bot],
-  exact ⟨max_le (hπ.2.2 hd).1 (hπ.2.2 hd).2, zero_le c⟩
+  wlog hc : c₁ ≤ c₂ := le_total c₁ c₂ using [c₁ c₂ r₁ r₂ π₁ π₂, c₂ c₁ r₂ r₁ π₂ π₁] tactic.skip,
+  { by_cases hD : (l.bDistortion : Prop),
+    { rcases h₁.4 hD with ⟨π, hπU, hπc⟩,
+      exact ⟨π, hπU, λ _, hπc, λ _, hπc.trans hc⟩ },
+    { exact ⟨π₁.to_prepartition.compl, π₁.to_prepartition.Union_compl,
+        λ h, (hD h).elim, λ h, (hD h).elim⟩ } },
+  { intros h₁ h₂ hU,
+    simpa [hU, and_comm] using this h₂ h₁ hU.symm }
 end
 
-lemma bUnion_tagged_mem_to_set {l : integration_filter} {c : ℝ≥0} {r : (ι → ℝ) → ℝ}
-  {π : prepartition I} {πi : Π J, tagged_prepartition J}
-  (h : ∀ J ∈ π, πi J ∈ l.to_set J c r) (hp : ∀ J ∈ π, (πi J).is_partition)
+protected lemma mem_base_set.union_compl_to_subordinate (hπ₁ : l.mem_base_set I c r₁ π₁)
+  (hr₁ : ∀ x ∈ I.Icc, r₂ x ≤ r₁ x) (hr₂ : ∀ x ∈ I.Icc, 0 < r₂ x) {π₂ : prepartition I}
+  (hU : π₂.Union = I \ π₁.Union) (hc : l.bDistortion → π₂.distortion ≤ c) :
+  l.mem_base_set I c r₁
+    ((π₁.union_compl (π₂.to_subordinate r₂)).get ((π₂.Union_to_subordinate _).trans hU)) :=
+begin
+  refine ⟨hπ₁.1.union_compl ((π₂.is_subordinate_to_subordinate hr₂).mono hr₁) _,
+    λ h, ((hπ₁.2 h).union_compl (π₂.is_Henstock_to_subordinate _) _),
+    λ h, (distortion_union_compl_get _).trans_le (max_le (hπ₁.3 h) _),
+    λ _, ⟨⊥, _⟩⟩,
+  { rw π₂.distortion_to_subordinate, exact hc h },
+  { simp }
+end
+
+protected lemma mem_base_set.filter (hπ : l.mem_base_set I c r π) (p : box ι → Prop) :
+  l.mem_base_set I c r (π.filter p) :=
+begin
+  refine ⟨λ J hJ, hπ.1 J (π.mem_filter.1 hJ).1, λ hH J hJ, hπ.2 hH J (π.mem_filter.1 hJ).1,
+    λ hD, (distortion_filter_le _ _).trans (hπ.3 hD), λ hD, _⟩,
+  rcases hπ.4 hD with ⟨π₁, hπ₁U, hc⟩,
+  set π₂ := π.filter (λ J, ¬p J),
+  have : disjoint π₁.Union π₂.Union,
+    by simpa [π₂, hπ₁U] using (disjoint_diff.mono_left sdiff_le).symm,
+  refine ⟨(π₁.disj_union π₂.to_prepartition).get this, _, _⟩,
+  { suffices : ↑I \ π.Union ∪ π.Union \ (π.filter p).Union = ↑I \ (π.filter p).Union, by simpa *,
+    have : (π.filter p).Union ⊆ π.Union, from bUnion_subset_bUnion_left (finset.filter_subset _ _),
+    ext x, fsplit,
+    { rintro (⟨hxI, hxπ⟩|⟨hxπ, hxp⟩),
+      exacts [⟨hxI, mt (@this x) hxπ⟩, ⟨π.Union_subset hxπ, hxp⟩] },
+    { rintro ⟨hxI, hxp⟩, by_cases hxπ : x ∈ π.Union,
+      exacts [or.inr ⟨hxπ, hxp⟩, or.inl ⟨hxI, hxπ⟩] } },
+  { have : (π.filter (λ J, ¬p J)).distortion ≤ c, from (distortion_filter_le _ _).trans (hπ.3 hD),
+    simpa [hc] }
+end
+
+lemma bUnion_tagged_mem_base_set {π : prepartition I} {πi : Π J, tagged_prepartition J}
+  (h : ∀ J ∈ π, l.mem_base_set J c r (πi J)) (hp : ∀ J ∈ π, (πi J).is_partition)
   (hc : l.bDistortion → π.compl.distortion ≤ c) :
-  π.bUnion_tagged πi ∈ l.to_set I c r :=
+  l.mem_base_set I c r (π.bUnion_tagged πi) :=
 begin
   refine ⟨tagged_prepartition.is_subordinate_bUnion_tagged.2 $ λ J hJ, (h J hJ).1,
-    λ hH, tagged_prepartition.is_Henstock_bUnion_tagged.2 $ λ J hJ, (h J hJ).2.1 hH,
-    λ hD, ⟨_, _⟩⟩,
+    λ hH, tagged_prepartition.is_Henstock_bUnion_tagged.2 $ λ J hJ, (h J hJ).2 hH,
+    λ hD, _, λ hD, _⟩,
   { rw [prepartition.distortion_bUnion_tagged, finset.sup_le_iff],
-    exact λ J hJ, ((h J hJ).2.2 hD).1 },
-  { convert hc hD using 2, apply prepartition.compl_congr,
-    exact π.Union_bUnion_partition hp }
+    exact λ J hJ, (h J hJ).3 hD },
+  { refine ⟨_, _, hc hD⟩,
+    rw [π.Union_compl, ← π.Union_bUnion_partition hp], refl }
 end
 
-@[mono] lemma r_cond.mono {I : box ι} {l₁ l₂ : integration_filter} (h : l₁ ≤ l₂) {r : (ι → ℝ) → ℝ}
-  (hr :  l₂.r_cond I r) : l₁.r_cond I r :=
+@[mono] lemma r_cond.mono (h : l₁ ≤ l₂) (hr :  l₂.r_cond I r) : l₁.r_cond I r :=
 ⟨hr.1, λ x hx hR, hr.2 x hx (le_iff_imp.1 h.1 hR)⟩
 
-lemma r_cond.to_subbox {I J : box ι} {l : integration_filter} {r : (ι → ℝ) → ℝ} (hr : l.r_cond I r)
-  (hJ : J ≤ I) : l.r_cond J r :=
+lemma r_cond.to_subbox (hr : l.r_cond I r) (hJ : J ≤ I) : l.r_cond J r :=
 have J.Icc ⊆ I.Icc, from box.le_iff_Icc.1 hJ,
 ⟨λ x hx, hr.1 x (this hx),
   λ x hx hR, (hr.2 x (this hx) hR).trans (hr.2 _ (this J.upper_mem_Icc) hR).symm⟩
 
-lemma r_cond.min {I : box ι} {l : integration_filter} {r₁ r₂ : (ι → ℝ) → ℝ}
-  (h₁ : l.r_cond I r₁) (h₂ : l.r_cond I r₂) : l.r_cond I (λ x, min (r₁ x) (r₂ x)) :=
+lemma r_cond.min (h₁ : l.r_cond I r₁) (h₂ : l.r_cond I r₂) : l.r_cond I (λ x, min (r₁ x) (r₂ x)) :=
 ⟨λ x hx, lt_min (h₁.1 x hx) (h₂.1 x hx), λ x hx h, congr_arg2 min (h₁.2 x hx h) (h₂.2 x hx h)⟩
 
-@[mono] lemma to_filter_distortion_mono (I : box ι) {l₁ l₂ : integration_filter} (h : l₁ ≤ l₂)
-  {c₁ c₂ : ℝ≥0} (hc : c₁ ≤ c₂) :
+@[mono] lemma to_filter_distortion_mono (I : box ι) (h : l₁ ≤ l₂) (hc : c₁ ≤ c₂) :
   l₁.to_filter_distortion I c₁ ≤ l₂.to_filter_distortion I c₂ :=
 infi_le_infi $ λ r, infi_le_infi2 $ λ hr,
-  ⟨hr.mono h, principal_mono.2 $ to_set_mono I h hc (λ _ _, le_rfl)⟩
+  ⟨hr.mono h, principal_mono.2 $ λ _, mem_base_set.mono I h hc (λ _ _, le_rfl)⟩
 
 @[mono] lemma to_filter_mono (I : box ι) {l₁ l₂ : integration_filter} (h : l₁ ≤ l₂) :
   l₁.to_filter I ≤ l₂.to_filter I :=
@@ -153,82 +182,79 @@ lemma to_filter_Union_congr (I : box ι) (l : integration_filter) {π₁ π₂ :
 by simp only [to_filter_Union, to_filter_distortion_Union, h]
 
 lemma has_basis_to_filter_distortion (l : integration_filter) (I : box ι) (c : ℝ≥0) :
-  (l.to_filter_distortion I c).has_basis (l.r_cond I) (l.to_set I c) :=
+  (l.to_filter_distortion I c).has_basis (l.r_cond I) (λ r, {π | l.mem_base_set I c r π}) :=
 has_basis_binfi_principal'
   (λ r₁ hr₁ r₂ hr₂, ⟨_, hr₁.min hr₂,
-    to_set_mono _ le_rfl le_rfl (λ x hx, min_le_left _ _),
-    to_set_mono _ le_rfl le_rfl (λ x hx, min_le_right _ _)⟩)
+    λ _, mem_base_set.mono _ le_rfl le_rfl (λ x hx, min_le_left _ _),
+    λ _, mem_base_set.mono _ le_rfl le_rfl (λ x hx, min_le_right _ _)⟩)
   ⟨λ _, 1, λ x hx, zero_lt_one, λ _ _ _, rfl⟩
 
 lemma has_basis_to_filter_distortion_Union (l : integration_filter) (I : box ι) (c : ℝ≥0)
   (π₀ : prepartition I) :
   (l.to_filter_distortion_Union I c π₀).has_basis (l.r_cond I)
-    (λ r, l.to_set I c r ∩ {π | π.Union = π₀.Union}) :=
+    (λ r, {π | l.mem_base_set I c r π ∧ π.Union = π₀.Union}) :=
 (l.has_basis_to_filter_distortion I c).inf_principal _
 
 lemma has_basis_to_filter_Union (l : integration_filter) (I : box ι) (π₀ : prepartition I) :
   (l.to_filter_Union I π₀).has_basis (λ r : ℝ≥0 → (ι → ℝ) → ℝ, ∀ c, l.r_cond I (r c))
-    (λ r, ⋃ c, l.to_set I c (r c) ∩ {π | π.Union = π₀.Union}) :=
+    (λ r, {π | ∃ c, l.mem_base_set I c (r c) π ∧ π.Union = π₀.Union}) :=
 have _ := λ c, l.has_basis_to_filter_distortion_Union I c π₀,
-has_basis_supr this
+by simpa only [set_of_and, set_of_exists] using has_basis_supr this
 
 lemma has_basis_to_filter_Union_top (l : integration_filter) (I : box ι) :
   (l.to_filter_Union I ⊤).has_basis (λ r : ℝ≥0 → (ι → ℝ) → ℝ, ∀ c, l.r_cond I (r c))
-    (λ r, ⋃ c, l.to_set I c (r c) ∩ {π | π.is_partition}) :=
+    (λ r, {π | ∃ c, l.mem_base_set I c (r c) π ∧ π.is_partition}) :=
 by simpa only [tagged_prepartition.is_partition_iff_Union_eq, prepartition.Union_top]
   using l.has_basis_to_filter_Union I ⊤
 
 lemma has_basis_to_filter (l : integration_filter) (I : box ι) :
   (l.to_filter I).has_basis (λ r : ℝ≥0 → (ι → ℝ) → ℝ, ∀ c, l.r_cond I (r c))
-    (λ r, ⋃ c, l.to_set I c (r c)) :=
-has_basis_supr (l.has_basis_to_filter_distortion I)
+    (λ r, {π | ∃ c, l.mem_base_set I c (r c) π}) :=
+by simpa only [set_of_exists] using has_basis_supr (l.has_basis_to_filter_distortion I)
 
 lemma tendsto_embed_box_to_filter_Union_top (l : integration_filter) (h : I ≤ J) :
   tendsto (tagged_prepartition.embed_box I J h) (l.to_filter_Union I ⊤)
     (l.to_filter_Union J (prepartition.single J I h)) :=
 begin
   simp only [to_filter_Union, tendsto_supr], intro c,
-  refine le_supr_of_le (max c (prepartition.single J I h).compl.distortion) _,
+  set π₀ := (prepartition.single J I h),
+  refine le_supr_of_le (max c π₀.compl.distortion) _,
   refine ((l.has_basis_to_filter_distortion_Union I c ⊤).tendsto_iff
     (l.has_basis_to_filter_distortion_Union J _ _)).2 (λ r hr, _),
   have : I.Icc ⊆ J.Icc, from box.le_iff_Icc.1 h,
   refine ⟨r, hr.to_subbox h, λ π hπ, _⟩,
-  rw [mem_inter_eq, mem_set_of_eq, prepartition.Union_top] at hπ,
-  rw [prepartition.Union_single],
-  refine ⟨⟨hπ.1.1, hπ.1.2.1, λ hD, ⟨le_trans _ (le_max_left _ _), _⟩⟩, hπ.2⟩,
-  { exact (hπ.1.2.2 hD).1 },
-  { convert le_max_right _ _ using 3,
-    exact prepartition.compl_congr ((prepartition.Union_single _).trans hπ.2.symm) }
+  rw [mem_set_of_eq, prepartition.Union_top] at hπ,
+  refine ⟨⟨hπ.1.1, hπ.1.2, λ hD, le_trans (hπ.1.3 hD) (le_max_left _ _), λ hD, _⟩, _⟩,
+  { refine ⟨_, π₀.Union_compl.trans _, le_max_right _ _⟩, congr' 1,
+    exact (prepartition.Union_single h).trans hπ.2.symm },
+  { exact hπ.2.trans (prepartition.Union_single _).symm }
 end
 
-lemma nonempty_to_set_inter_le_Union_eq (l : integration_filter) {I : box ι} (π₀ : prepartition I)
-  {c : ℝ≥0} (hc₁ : π₀.distortion ≤ c) (hc₂ : π₀.compl.distortion ≤ c)
+lemma exists_mem_base_set_le_Union_eq (l : integration_filter) (π₀ : prepartition I)
+  (hc₁ : π₀.distortion ≤ c) (hc₂ : π₀.compl.distortion ≤ c)
   {r : (ι → ℝ) → ℝ} (hr : ∀ x ∈ I.Icc, 0 < r x) :
-  (l.to_set I c r ∩ {π | π.to_prepartition ≤ π₀ ∧ π.Union = π₀.Union}).nonempty :=
+  ∃ π, l.mem_base_set I c r π ∧ π.to_prepartition ≤ π₀ ∧ π.Union = π₀.Union :=
 begin
   rcases π₀.exists_tagged_le_is_Henstock_is_subordinate_Union_eq hr
     with ⟨π, hle, hH, hr, hd, hU⟩,
-  exact ⟨π, ⟨hr, λ _, hH, λ _, ⟨hd.trans_le hc₁, by rwa [prepartition.compl_congr hU]⟩⟩, ⟨hle, hU⟩⟩
+  refine ⟨π, ⟨hr, λ _, hH, λ _, hd.trans_le hc₁, λ hD, ⟨π₀.compl, _, hc₂⟩⟩, ⟨hle, hU⟩⟩,
+  exact prepartition.compl_congr hU ▸ π.to_prepartition.Union_compl
 end
 
-lemma nonempty_to_set_inter_is_partition (l : integration_filter) (I : box ι) {c : ℝ≥0}
-  (hc : I.distortion ≤ c) {r : (ι → ℝ) → ℝ} (hr : ∀ x ∈ I.Icc, 0 < r x) :
-  (l.to_set I c r ∩ {π | π.is_partition}).nonempty :=
+lemma exists_mem_base_set_is_partition (l : integration_filter) (I : box ι)
+  (hc : I.distortion ≤ c) (hr : ∀ x ∈ I.Icc, 0 < r x) :
+  ∃ π, l.mem_base_set I c r π ∧ π.is_partition :=
 begin
-  rcases (⊤ : prepartition I).exists_tagged_le_is_Henstock_is_subordinate_Union_eq hr
-    with ⟨π, hle, hH, hr, hd, hU⟩,
-  rw prepartition.distortion_top at hd,
-  rw [prepartition.Union_top, ← tagged_prepartition.is_partition_iff_Union_eq] at hU,
-  refine ⟨π, ⟨hr, λ _, hH, λ hD, ⟨hd.symm ▸ hc, _⟩⟩, hU⟩,
-  rw [hU.compl_eq_bot, prepartition.distortion_bot], exact zero_le c
+  rw ← prepartition.distortion_top at hc,
+  have hc' : (⊤ : prepartition I).compl.distortion ≤ c, by simp,
+  simpa [is_partition_iff_Union_eq] using l.exists_mem_base_set_le_Union_eq ⊤ hc hc' hr
 end
 
 lemma to_filter_distortion_Union_ne_bot (l : integration_filter) (I : box ι)
   (π₀ : prepartition I) (hc₁ : π₀.distortion ≤ c) (hc₂ : π₀.compl.distortion ≤ c) :
   (l.to_filter_distortion_Union I c π₀).ne_bot :=
 ((l.has_basis_to_filter_distortion I _).inf_principal _).ne_bot_iff.2 $ λ r hr,
-  (l.nonempty_to_set_inter_le_Union_eq π₀ hc₁ hc₂ hr.1).mono $
-    inter_subset_inter_right _ $ λ π, and.right
+  (l.exists_mem_base_set_le_Union_eq π₀ hc₁ hc₂ hr.1).imp $ λ π hπ, ⟨hπ.1, hπ.2.2⟩
 
 instance to_filter_distortion_Union_ne_bot' (l : integration_filter) (I : box ι)
   (π₀ : prepartition I) :

@@ -78,6 +78,21 @@ lemma integral_union (hst : disjoint s t) (hs : measurable_set s) (ht : measurab
   ∫ x in s ∪ t, f x ∂μ = ∫ x in s, f x ∂μ + ∫ x in t, f x ∂μ :=
 by simp only [integrable_on, measure.restrict_union hst hs ht, integral_add_measure hfs hft]
 
+lemma integral_finset_bUnion (s : finset β) {t : β → set α}
+  (htm : ∀ x ∈ s, measurable_set (t x)) (hti : ∀ x ∈ s, integrable_on f (t x) μ)
+  (hd : pairwise_on ↑s (disjoint on t)) :
+  ∫ y in ⋃ x ∈ s, t x, f y ∂μ = ∑ x in s, ∫ y in t x, f y ∂μ :=
+begin
+  induction s using finset.induction_on with a s ha ihs, { simp },
+  simp only [finset.forall_mem_insert, finset.coe_insert, pairwise_on_insert] at *,
+  have : disjoint (t a) (⋃ x ∈ s, t x),
+  { simp only [disjoint_Union_right],
+    exact λ x hx, (hd.2 _ hx (ne_of_mem_of_not_mem hx ha).symm).1 },
+  have := integral_union this htm.1 (s.measurable_set_bUnion htm.2) hti.1
+    (integrable_on_finset_union.2 hti.2),
+  simp [this, ihs htm.2 hti.2 hd.1, ha]
+end
+
 lemma integral_empty : ∫ x in ∅, f x ∂μ = 0 := by rw [measure.restrict_empty, integral_zero_measure]
 
 lemma integral_univ : ∫ x in univ, f x ∂μ = ∫ x, f x ∂μ := by rw [measure.restrict_univ]

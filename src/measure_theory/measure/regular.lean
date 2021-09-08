@@ -98,15 +98,19 @@ namespace measure_theory
 namespace measure
 
 variables {α β : Type*} [measurable_space α] [topological_space α] {μ : measure α}
+
+/-- A measure `μ` is outer regular if `μ(A) = inf {μ(U) | A ⊆ U open}` for a measurable set `A`. -/
+@[protect_proj] class outer_regular (μ : measure α) : Prop :=
+(outer_regular : ∀ ⦃A : set α⦄, measurable_set A →
+  (⨅ (U : set α) (h : is_open U) (h2 : A ⊆ U), μ U) ≤ μ A)
+
 /-- A measure `μ` is regular if
   - it is finite on all compact sets;
   - it is outer regular: `μ(A) = inf {μ(U) | A ⊆ U open}` for `A` measurable;
   - it is inner regular for open sets, using compact sets:
     `μ(U) = sup {μ(K) | K ⊆ U compact}` for `U` open. -/
-class regular (μ : measure α) : Prop :=
+class regular (μ : measure α) extends outer_regular μ : Prop :=
 (lt_top_of_is_compact : ∀ ⦃K : set α⦄, is_compact K → μ K < ∞)
-(outer_regular : ∀ ⦃A : set α⦄, measurable_set A →
-  (⨅ (U : set α) (h : is_open U) (h2 : A ⊆ U), μ U) ≤ μ A)
 (inner_regular : ∀ ⦃U : set α⦄, is_open U →
   μ U ≤ ⨆ (K : set α) (h : is_compact K) (h2 : K ⊆ U), μ K)
 
@@ -114,46 +118,83 @@ class regular (μ : measure α) : Prop :=
   - it is outer regular: `μ(A) = inf { μ(U) | A ⊆ U open }` for `A` measurable;
   - it is inner regular for open sets, using closed sets:
     `μ(U) = sup {μ(F) | F ⊆ U compact}` for `U` open. -/
-class weakly_regular (μ : measure α) : Prop :=
-(outer_regular : ∀ ⦃A : set α⦄, measurable_set A →
-  (⨅ (U : set α) (h : is_open U) (h2 : A ⊆ U), μ U) ≤ μ A)
+class weakly_regular (μ : measure α) extends outer_regular μ : Prop :=
 (inner_regular : ∀ ⦃U : set α⦄, is_open U →
   μ U ≤ ⨆ (F : set α) (h : is_closed F) (h2 : F ⊆ U), μ F)
 
 /-- A regular measure is weakly regular. -/
 @[priority 100] -- see Note [lower instance priority]
 instance regular.weakly_regular [t2_space α] [regular μ] : weakly_regular μ :=
-{ outer_regular := regular.outer_regular,
-  inner_regular := λ U hU, calc
+{ inner_regular := λ U hU, calc
     μ U ≤ ⨆ (K : set α) (h : is_compact K) (h2 : K ⊆ U), μ K : regular.inner_regular hU
     ... ≤ ⨆ (F : set α) (h : is_closed F) (h2 : F ⊆ U), μ F :
       by { simp only [supr_and'], exact bsupr_le_bsupr' (λ i hi, ⟨hi.1.is_closed, hi.2⟩) } }
 
+namespace outer_regular
+
+instance zero : outer_regular (0 : measure α) :=
+⟨λ A hA, binfi_le_of_le univ is_open_univ $ infi_le _ (subset_univ A)⟩
+
+/-- For an outer regular measure, the measure of a set is the infimum of the measures of open sets
+containing it. -/
+lemma _root_.set.measure_eq_infi_is_open (A : set α) (μ : measure α) [outer_regular μ] :
+  μ A = (⨅ (U : set α) (h : is_open U) (h2 : A ⊆ U), μ U) :=
+begin
+  refine le_antisymm (le_infi $ λ s, le_infi $ λ hs, le_infi $ λ h2s, μ.mono h2s) _,
+  rw ← @measure_to_measurable _ _ μ A,
+  refine le_trans _ (outer_regular.outer_regular (measurable_set_to_measurable μ A)),
+  exact infi_le_infi (λ U, infi_le_infi $ λ hU, infi_le_infi2 $
+    λ hAU, ⟨(subset_to_measurable _ _).trans hAU, le_rfl⟩)
+end
+
+/-- Given `r` larger than the measure of a set `A`, there exists an open superset of `A` with
+measure less than `r`. -/
+lemma _root_.set.exists_is_open_lt_of_lt [outer_regular μ] (A : set α) (r : ℝ≥0∞) (hr : μ A < r) :
+  ∃ U, is_open U ∧ A ⊆ U ∧ μ U < r :=
+begin
+  rw A.measure_eq_infi_is_open μ at hr,
+  simpa only [infi_lt_iff, exists_prop] using hr
+end
+
+/-- Given an outer regular measure, any finite measure set is contained in a finite measure open
+set.-/
+lemma exists_subset_is_open_measure_lt_top [outer_regular μ] {A : set α} (h'A : μ A ≠ ∞) :
+  ∃ U, is_open U ∧ A ⊆ U ∧ μ U < ∞ :=
+begin
+  rcases A.exists_is_open_lt_of_lt _ (ennreal.lt_add_right h'A ennreal.zero_lt_one)
+    with ⟨U, hUo, hBU, hμU⟩,
+  exact ⟨U, hUo, hBU, hμU.trans_le le_top⟩
+end
+
+protected lemma map [opens_measurable_space α] [measurable_space β] [topological_space β]
+  [t2_space β] [borel_space β] (f : α ≃ₜ β) (μ : measure α) [outer_regular μ] :
+  (measure.map f μ).outer_regular :=
+begin
+  refine ⟨λ A hA, le_of_eq _⟩,
+  simp only [map_apply f.measurable hA, (f ⁻¹' A).measure_eq_infi_is_open],
+  refine infi_congr (preimage f) f.injective.preimage_surjective (λ U, _),
+  refine infi_congr_Prop f.is_open_preimage (λ hU, _),
+  refine infi_congr_Prop f.surjective.preimage_subset_preimage_iff (λ h2U, _),
+  rw [map_apply f.measurable hU.measurable_set]
+end
+
+protected lemma smul (μ : measure α) [outer_regular μ] {x : ℝ≥0∞} (hx : x ≠ ∞) :
+  (x • μ).outer_regular :=
+begin
+  rcases eq_or_ne x 0 with rfl|h0,
+  { rw zero_smul, exact outer_regular.zero },
+  { refine ⟨λ A hA, _⟩,
+    simp only [smul_apply],
+    refine eq.trans_le _ (ennreal.mul_left_mono $ outer_regular.outer_regular hA),
+    simp only [ennreal.mul_infi_of_ne h0 hx] },
+end
+
+end outer_regular
+
 namespace regular
 
 instance zero : regular (0 : measure α) :=
-⟨λ K hK, ennreal.coe_lt_top,
-  λ A hA, binfi_le_of_le univ is_open_univ $ infi_le _ (subset_univ A),
-  λ U hU, zero_le _⟩
-
-/-- The measure of a measurable set is the infimum of the measures of open sets containing it.
-The unprimed version is reserved for weakly regular measures, as regular measures are automatically
-weakly regular most of the time. -/
-lemma _root_.measurable_set.measure_eq_infi_is_open' ⦃A : set α⦄ (hA : measurable_set A)
-  (μ : measure α) [regular μ] :
-  μ A = (⨅ (U : set α) (h : is_open U) (h2 : A ⊆ U), μ U) :=
-le_antisymm (le_infi $ λ s, le_infi $ λ hs, le_infi $ λ h2s, μ.mono h2s) (regular.outer_regular hA)
-
-/-- Given `r` larger than the measure of a measurable set `A`, there exists an open superset of `A`
-with measure `< r`. The unprimed version is reserved for weakly regular measures, as regular
-measures are automatically weakly regular most of the time.  -/
-lemma _root_.measurable_set.exists_is_open_lt_of_lt'
-  [regular μ] ⦃A : set α⦄ (hA : measurable_set A) (r : ℝ≥0∞) (hr : μ A < r) :
-  ∃ U, is_open U ∧ A ⊆ U ∧ μ U < r :=
-begin
-  rw hA.measure_eq_infi_is_open' μ at hr,
-  simpa only [infi_lt_iff, exists_prop] using hr
-end
+⟨λ K hK, ennreal.coe_lt_top, λ U hU, zero_le _⟩
 
 /-- The measure of an open set is the supremum of the measures of compact sets it contains. -/
 lemma _root_.is_open.measure_eq_supr_is_compact ⦃U : set α⦄ (hU : is_open U)
@@ -169,8 +210,8 @@ begin
   simpa only [lt_supr_iff, exists_prop] using hr
 end
 
-lemma _root_.is_open.exists_is_compact_lt_add [t2_space α] [regular μ] [opens_measurable_space α]
-  ⦃U : set α⦄ (hU : is_open U) (hμU : μ U ≠ ∞) {r : ℝ≥0∞} (hr : 0 < r) :
+lemma _root_.is_open.exists_is_compact_lt_add [regular μ] ⦃U : set α⦄ (hU : is_open U)
+  (hμU : μ U ≠ ∞) {r : ℝ≥0∞} (hr : 0 < r) :
   ∃ K, is_compact K ∧ K ⊆ U ∧ μ U < μ K + r :=
 begin
   cases eq_or_ne (μ U) 0 with h₀ h₀,
@@ -186,17 +227,17 @@ by simp_rw [ne.def, ← measure_univ_eq_zero, is_open_univ.measure_eq_supr_is_co
 
 /-- If `s` is a measurable set, a regular measure `μ` is finite on `s`, and `r` is a positive
 number, then there exist a compact set `K ⊆ s` and an open set `U ⊇ s` such that `μ U < μ K + r`. -/
-lemma _root_.measurable_set.exists_is_compact_is_open_lt_add [t2_space α] [regular μ]
+lemma _root_.measurable_set.exists_is_compact_is_open_lt_add [regular μ]
   [opens_measurable_space α] {s : set α} (hs : measurable_set s) (hμs : μ s ≠ ∞)
   {r : ℝ≥0∞} (hr : 0 < r) :
   ∃ K U, is_compact K ∧ is_open U ∧ K ⊆ s ∧ s ⊆ U ∧ μ U < μ K + r :=
 begin
-  rcases hs.exists_is_open_lt_of_lt' (μ s + r / 2) (ennreal.lt_add_right hμs (ennreal.half_pos hr))
+  rcases s.exists_is_open_lt_of_lt (μ s + r / 2) (ennreal.lt_add_right hμs (ennreal.half_pos hr))
     with ⟨U, hUo, hsU, hμU⟩,
   have : μ (U \ s) < r / 2,
   { rw [measure_diff hsU hUo.measurable_set hs hμs],
     refine ennreal.sub_lt_of_lt_add (measure_mono hsU) _, rwa add_comm },
-  rcases (hUo.measurable_set.diff hs).exists_is_open_lt_of_lt' _ this with ⟨U', hU'o, hsU', hμU'⟩,
+  rcases (U \ s).exists_is_open_lt_of_lt _ this with ⟨U', hU'o, hsU', hμU'⟩,
   rw diff_subset_comm at hsU',
   rcases hUo.exists_is_compact_lt_add (ne_top_of_lt hμU) (ennreal.half_pos hr)
     with ⟨K, hKc, hKU, hKr⟩,
@@ -229,7 +270,7 @@ end
 
 /-- Given a regular measure, any measurable set of finite mass can be approximated from
 inside by compact sets. -/
-lemma _root_.measurable_set.measure_eq_supr_is_compact_of_lt_top
+lemma _root_.measurable_set.measure_eq_supr_is_compact_of_ne_top
   [opens_measurable_space α] [t2_space α] [regular μ]
   ⦃A : set α⦄ (hA : measurable_set A) (h'A : μ A ≠ ∞) :
   μ A = (⨆ (K : set α) (h : is_compact K) (h2 : K ⊆ A), μ K) :=
@@ -246,20 +287,11 @@ begin
   have hf := f.measurable,
   have h2f := f.to_equiv.injective.preimage_surjective,
   have h3f := f.to_equiv.surjective,
+  haveI := outer_regular.map f μ,
   split,
   { intros K hK, rw [map_apply hf hK.measurable_set],
     apply regular.lt_top_of_is_compact,
     rwa f.compact_preimage },
-  { intros A hA,
-    rw [map_apply hf hA, (hf hA).measure_eq_infi_is_open'],
-    refine le_of_eq _,
-    apply infi_congr (preimage f) h2f,
-    intro U,
-    apply infi_congr_Prop f.is_open_preimage,
-    intro hU,
-    apply infi_congr_Prop h3f.preimage_subset_preimage_iff,
-    intro h2U,
-    rw [map_apply hf hU.measurable_set], },
   { intros U hU,
     rw [map_apply hf hU.measurable_set, (hU.preimage f.continuous).measure_eq_supr_is_compact],
     refine ge_of_eq _,
@@ -275,13 +307,9 @@ end
 protected lemma smul [regular μ] {x : ℝ≥0∞} (hx : x ≠ ∞) :
   (x • μ).regular :=
 begin
-  rcases eq_or_ne x 0 with rfl|h0,
-  { rw zero_smul, exact regular.zero },
+  haveI := outer_regular.smul μ hx,
   split,
   { exact λ K hK, ennreal.mul_lt_top (lt_top_iff_ne_top.2 hx) (regular.lt_top_of_is_compact hK) },
-  { intros A hA, simp only [smul_apply],
-    refine eq.trans_le _ (ennreal.mul_left_mono $ regular.outer_regular hA),
-    simp only [ennreal.mul_infi_of_ne h0 hx] },
   { intros U hU, simp only [smul_apply],
     simpa only [ennreal.mul_supr] using (ennreal.mul_left_mono $ regular.inner_regular hU) }
 end
@@ -298,20 +326,6 @@ instance sigma_finite [opens_measurable_space α] [t2_space α] [sigma_compact_s
 end regular
 
 namespace weakly_regular
-
-lemma _root_.measurable_set.measure_eq_infi_is_open ⦃A : set α⦄ (hA : measurable_set A)
-  (μ : measure α) [weakly_regular μ] :
-  μ A = (⨅ (U : set α) (h : is_open U) (h2 : A ⊆ U), μ U) :=
-le_antisymm (le_infi $ λ s, le_infi $ λ hs, le_infi $ λ h2s, μ.mono h2s)
-  (weakly_regular.outer_regular hA)
-
-lemma _root_.measurable_set.exists_is_open_lt_of_lt
-  [weakly_regular μ] ⦃A : set α⦄ (hA : measurable_set A) (r : ℝ≥0∞) (hr : μ A < r) :
-  ∃ U, is_open U ∧ A ⊆ U ∧ μ U < r :=
-begin
-  rw hA.measure_eq_infi_is_open μ at hr,
-  simpa only [infi_lt_iff, exists_prop] using hr
-end
 
 lemma _root_.is_open.measure_eq_supr_is_closed ⦃U : set α⦄ (hU : is_open U)
   (μ : measure α) [weakly_regular μ] :
@@ -345,12 +359,12 @@ lemma _root_.measurable_set.exists_is_closed_is_open_lt_add [weakly_regular μ]
   {r : ℝ≥0∞} (hr : 0 < r) :
   ∃ K U, is_closed K ∧ is_open U ∧ K ⊆ s ∧ s ⊆ U ∧ μ U < μ K + r :=
 begin
-  rcases hs.exists_is_open_lt_of_lt (μ s + r / 2) (ennreal.lt_add_right hμs (ennreal.half_pos hr))
+  rcases s.exists_is_open_lt_of_lt (μ s + r / 2) (ennreal.lt_add_right hμs (ennreal.half_pos hr))
     with ⟨U, hUo, hsU, hμU⟩,
   have : μ (U \ s) < r / 2,
   { rw [measure_diff hsU hUo.measurable_set hs hμs],
     refine ennreal.sub_lt_of_lt_add (measure_mono hsU) _, rwa add_comm },
-  rcases (hUo.measurable_set.diff hs).exists_is_open_lt_of_lt _ this with ⟨U', hU'o, hsU', hμU'⟩,
+  rcases (U \ s).exists_is_open_lt_of_lt _ this with ⟨U', hU'o, hsU', hμU'⟩,
   rw diff_subset_comm at hsU',
   rcases hUo.exists_is_closed_lt_add (ne_top_of_lt hμU) (ennreal.half_pos hr)
     with ⟨K, hKc, hKU, hKr⟩,
@@ -384,18 +398,6 @@ begin
   refine le_antisymm (le_of_forall_lt $ λ r hr, _) _,
   { simpa only [lt_supr_iff, exists_prop] using hA.exists_lt_is_closed_of_ne_top h'A hr },
   { simp only [supr_le_iff], exact λ K _ hKA, measure_mono hKA }
-end
-
-/-- Given a weakly regular measure, any finite measure set is contained in a finite measure open
-set.-/
-lemma exists_subset_is_open_measure_lt_top [weakly_regular μ] {A : set α} (h'A : μ A ≠ ∞) :
-  ∃ U, is_open U ∧ A ⊆ U ∧ μ U < ∞ :=
-begin
-  rcases exists_measurable_superset μ A with ⟨B, AB, B_meas, μB⟩,
-  rw ← μB at h'A,
-  rcases B_meas.exists_is_open_lt_of_lt _ (ennreal.lt_add_right h'A ennreal.zero_lt_one)
-    with ⟨U, hUo, hBU, hμU⟩,
-  exact ⟨U, hUo, AB.trans hBU, hμU.trans_le le_top⟩
 end
 
 /-- In a finite measure space, assume that any open set can be approximated from inside by closed
@@ -669,7 +671,7 @@ instance of_sigma_compact_space_of_is_locally_finite_measure {X : Type*}
       end⟩,
       have : (⨅ (U : set X) (h : is_open U) (h2 : A ∩ C n ⊆ U), ν U) < ν (A ∩ C n) + δ n :=
       begin
-        refine (weakly_regular.outer_regular (hA.inter (C_meas n))).trans_lt _,
+        refine (outer_regular.outer_regular (hA.inter (C_meas n))).trans_lt _,
         simpa only [add_zero] using (ennreal.add_lt_add_iff_left (measure_ne_top ν _)).mpr (δpos n),
       end,
       simp only [infi_lt_iff] at this,
