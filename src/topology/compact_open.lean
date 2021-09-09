@@ -5,8 +5,6 @@ Authors: Reid Barton
 
 Type of continuous maps and the compact-open topology on them.
 -/
-import topology.algebra.infinite_sum
-import topology.continuous_function.algebra
 import topology.subset_properties
 import topology.continuous_function.basic
 import topology.homeomorph
@@ -48,45 +46,7 @@ variables [topological_space α] [topological_space β] [topological_space γ]
 
 def compact_open.gen (s : set α) (u : set β) : set C(α,β) := {f | f '' s ⊆ u}
 
-def compact_open'.gen (s : set α) (u : set β) : set (α → β) := {f | f '' s ⊆ u}
-
-variables (β)
-def uniform_on.gen (s : set α) : set (set C(α, β)) :=
-{m | ∃ (u : set β) (hu : is_open u), m = compact_open.gen s u}
-
-def uniform_on'.gen (s : set α) : set (set C(α, β)) :=
-{m | ∃ (s' : set α) (hs' : is_compact s) (hss' : s' ⊂ s) (u : set β) (hu : is_open u),
-  m = compact_open.gen s u}
-
-
-/-- For a fixed `s : set α`, the topology on the space of continuous maps `α → β` of "uniform
-convergence on `s`".  Not an instance because it varies with `s`. -/
-def uniform_on (s : set α) : topological_space C(α, β) :=
-topological_space.generate_from (uniform_on.gen β s)
-variables {β}
-
-lemma uniform_on_mono {s₁ s₂ : set α} (h : s₁ ⊆ s₂) : uniform_on β s₂ ≤ uniform_on β s₁ :=
-begin
-  dsimp [uniform_on],
-  apply generate_from_mono,
-  dsimp [uniform_on.gen],
-  rintros s ⟨t, ht, hts⟩,
-  refine ⟨t, ht, _⟩,
-  ext f,
-  simp [compact_open.gen],
-
-end
-
-private lemma is_open_uniform_on_gen (s : set α) {u : set β} (hu : is_open u) :
-  (uniform_on β s).is_open (compact_open.gen s u) :=
-topological_space.generate_open.basic _ (by dsimp [uniform_on.gen, mem_set_of_eq]; tauto)
-
-/-- The compact-open topology on the space of continuous maps `α → β`. -/
-instance compact_open' : topological_space (α → β) :=
-topological_space.generate_from
-  {m | ∃ (s : set α) (hs : is_compact s) (u : set β) (hu : is_open u), m = compact_open'.gen s u}
-
-/-- The compact-open topology on the space of continuous maps `α → β`. -/
+-- The compact-open topology on the space of continuous maps α → β.
 instance compact_open : topological_space C(α, β) :=
 topological_space.generate_from
   {m | ∃ (s : set α) (hs : is_compact s) (u : set β) (hu : is_open u), m = compact_open.gen s u}
@@ -94,89 +54,6 @@ topological_space.generate_from
 private lemma is_open_gen {s : set α} (hs : is_compact s) {u : set β} (hu : is_open u) :
   is_open (compact_open.gen s u) :=
 topological_space.generate_open.basic _ (by dsimp [mem_set_of_eq]; tauto)
-
-/-- The compact-open topology is equal to the infimum, as `s` varies over the compact subsets of
-`α`, of the topologies of uniform convergence on `s`. -/
-lemma compact_open_eq_Inf_uniform_on :
-  continuous_map.compact_open = ⨅ (s : set α) (hs : is_compact s), uniform_on β s :=
-begin
-  transitivity
-    topological_space.generate_from (⋃ (s : set α) (hs : is_compact s), uniform_on.gen β s),
-  { rw continuous_map.compact_open,
-    congr' 1,
-    ext s,
-    simp [uniform_on.gen] },
-  simp [generate_from_Union, uniform_on]
-end
-
-lemma nhds_compact_open_eq_Inf (f : C(α, β)) :
-  nhds f = ⨅ (s : set α) (hs : is_compact s), @nhds _ (uniform_on β s) f :=
-by { rw [compact_open_eq_Inf_uniform_on], simp [nhds_infi] }
-
-lemma nhds_uniform_on_mono {s₁ s₂ : set α} (hs : s₁ ⊆ s₂) (f : C(α, β)) :
-  @nhds _ (uniform_on β s₂) f ≤ @nhds _ (uniform_on β s₁) f :=
-nhds_mono (uniform_on_mono hs)
-
-lemma tendsto_compact_open_iff_forall {ι : Type*} {l : filter ι} (F : ι → C(α, β)) (f : C(α, β)) :
-  filter.tendsto F l (nhds f)
-  ↔ ∀ (s : set α) (hs : is_compact s), filter.tendsto F l (@nhds _ (uniform_on β s) f) :=
-by { rw [compact_open_eq_Inf_uniform_on], simp [nhds_infi] }
-
-lemma tendsto_uniform_on_mono {ι : Type*} {l : filter ι} {F : ι → C(α, β)} {s₁ s₂ : set α}
-  (hs : s₁ ⊆ s₂) {f : C(α, β)} (hFf : filter.tendsto F l (@nhds _ (uniform_on β s₂) f)) :
-  filter.tendsto F l (@nhds _ (uniform_on β s₁) f) :=
-hFf.mono_right (nhds_uniform_on_mono hs f)
-
-lemma continuous_eval {s : set α} {a : α} (ha : a ∈ s) :
-  @continuous _ _ (uniform_on β s) _ (λ f, f a) :=
-sorry
-
-lemma nhds_uniform_on_eq_nhds_uniform_on_iff [t2_space β] (s : set α) (f₁ f₂ : C(α, β)) :
-  @nhds _ (uniform_on β s) f₁ = @nhds _ (uniform_on β s) f₂ ↔ eq_on f₁ f₂ s :=
-sorry
-
-
-noncomputable def continuous_glue {α : Type*} [topological_space α] {β : Type*}
-  [topological_space β] {S : set (set α)}
-  (hs : ∀ x : α, (S ∩ (nhds x).sets).nonempty) {F : Π s, s ∈ S → C(α, β)}
-  (h : ∀ s (hs : s ∈ S) s' (hs' : s' ∈ S), eq_on (F s hs) (F s' hs') (s ∩ s')) :
-  unique {f : C(α, β) // ∀ s (hs : S s), eq_on (F s hs) f s} :=
-sorry
-
--- gluing lemma, probably can be made a bit more general
-lemma gluing [locally_compact_space α] [t2_space β] {ι : Type*} {l : filter ι} [filter.ne_bot l]
-  (F : ι → C(α, β)) :
-  (∃ f, filter.tendsto F l (nhds f))
-  ↔ ∀ (s : set α) (hs : is_compact s), ∃ f, filter.tendsto F l (@nhds _ (uniform_on β s) f) :=
-begin
-  split,
-  { rintros ⟨f, hf⟩ s hs,
-    rw tendsto_compact_open_iff_forall at hf,
-    exact ⟨f, hf s hs⟩ },
-  { intros h,
-    choose f hf using h,
-    -- By uniqueness of limits in a `t2_space`, since `λ i, F i x` tends to both `f s x` and
-    -- `f s' x`, we have `f s x = f s' x`
-    have h : ∀ s (hs : is_compact s) s' (hs' : is_compact s'), eq_on (f s hs) (f s' hs') (s ∩ s'),
-    { rintros s hs s' hs' x ⟨hxs, hxs'⟩,
-      have Hx := (continuous_eval hxs).continuous_at.tendsto,
-      have Hx' := (continuous_eval hxs').continuous_at.tendsto,
-      exact tendsto_nhds_unique (Hx.comp (hf s hs)) (Hx'.comp (hf s' hs')) },
-    -- So glue the `f s hs` together and prove that this glued function `f₀` is a limit on each
-    -- compact set `s`
-    have hs : ∀ x, (is_compact ∩ (nhds x).sets : set (set α)).nonempty := exists_compact_mem_nhds,
-    haveI := continuous_glue hs h,
-    obtain ⟨f₀, hf₀⟩ := default {f₀ : C(α, β) // ∀ s (hs : is_compact s), eq_on (f s hs) f₀ s},
-    refine ⟨f₀, _⟩,
-    rw tendsto_compact_open_iff_forall,
-    intros s hs,
-    convert hf s hs using 1,
-    -- For this it suffices to know that on `s` the glued function `f₀` equals `f s hs`
-    rw nhds_uniform_on_eq_nhds_uniform_on_iff,
-    exact (hf₀ s hs).symm }
-end
-
-
 
 section functorial
 
@@ -205,108 +82,114 @@ variables (α β)
 def ev (p : C(α, β) × α) : β := p.1 p.2
 
 variables {α β}
-
--- The evaluation map C(α, β) → β is continuous if α is locally compact.
-lemma continuous_ev' [locally_compact_space α] : ∀ x, continuous (λ f : C(α, β), f x) :=
-begin
-  intros x,
-  rw continuous_iff_continuous_at,
-  rintros f n hn,
-  obtain ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn,
-  have : v ∈ 𝓝 (f x) := is_open.mem_nhds vo fxv,
-  obtain ⟨s, hs, sv, sc⟩ :=
-    locally_compact_space.local_compact_nhds x (f ⁻¹' v)
-      (f.continuous.tendsto x this),
-  obtain ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs,
-  rw filter.mem_map,
-  let w := compact_open.gen s v,
-  have : w ⊆ (λ f : C(α, β), f x) ⁻¹' n,
-  { rintros f' hf', calc
-    f' x ∈ f' '' s  : mem_image_of_mem f' (us xu)
-    ...       ⊆ v            : hf'
-    ...       ⊆ n            : vn },
-  have : is_open w, from is_open_gen sc vo,
-  have : f ∈ w, from image_subset_iff.mpr sv,
-  exact mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
-
-  -- cases
-end
-
-
 -- The evaluation map C(α, β) × α → β is continuous if α is locally compact.
 lemma continuous_ev [locally_compact_space α] : continuous (ev α β) :=
-begin
-  rw continuous_iff_continuous_at,
-  rintros ⟨f, x⟩ n hn,
-  obtain ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn,
-  have : v ∈ 𝓝 (f x) := is_open.mem_nhds vo fxv,
-  obtain ⟨s, hs, sv, sc⟩ :=
+continuous_iff_continuous_at.mpr $ assume ⟨f, x⟩ n hn,
+  let ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn in
+  have v ∈ 𝓝 (f x), from is_open.mem_nhds vo fxv,
+  let ⟨s, hs, sv, sc⟩ :=
     locally_compact_space.local_compact_nhds x (f ⁻¹' v)
-      (f.continuous.tendsto x this),
-  obtain ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs,
-  change (ev α β) ⁻¹' n ∈ 𝓝 (f, x),
-  let w := set.prod (compact_open.gen s v) u,
-  have : w ⊆ ev α β ⁻¹' n,
-  { rintros ⟨f', x'⟩ ⟨hf', hx'⟩, calc
+      (f.continuous.tendsto x this) in
+  let ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs in
+  show (ev α β) ⁻¹' n ∈ 𝓝 (f, x), from
+  let w := set.prod (compact_open.gen s v) u in
+  have w ⊆ ev α β ⁻¹' n, from assume ⟨f', x'⟩ ⟨hf', hx'⟩, calc
     f' x' ∈ f' '' s  : mem_image_of_mem f' (us hx')
     ...       ⊆ v            : hf'
-    ...       ⊆ n            : vn },
-  have : is_open w, from (is_open_gen sc vo).prod uo,
-  have : (f, x) ∈ w, from ⟨image_subset_iff.mpr sv, xu⟩,
-  exact mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
+    ...       ⊆ n            : vn,
+  have is_open w, from (is_open_gen sc vo).prod uo,
+  have (f, x) ∈ w, from ⟨image_subset_iff.mpr sv, xu⟩,
+  mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
 
-  -- cases
-end
--- continuous_iff_continuous_at.mpr $ assume ⟨f, x⟩ n hn,
---   let ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn in
---   have v ∈ 𝓝 (f x), from is_open.mem_nhds vo fxv,
---   let ⟨s, hs, sv, sc⟩ :=
---     locally_compact_space.local_compact_nhds x (f ⁻¹' v)
---       (f.continuous.tendsto x this) in
---   let ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs in
---   show (ev α β) ⁻¹' n ∈ 𝓝 (f, x), from
---   let w := set.prod (compact_open.gen s v) u in
---   have w ⊆ ev α β ⁻¹' n, from assume ⟨f', x'⟩ ⟨hf', hx'⟩, calc
---     f' x' ∈ f' '' s  : mem_image_of_mem f' (us hx')
---     ...       ⊆ v            : hf'
---     ...       ⊆ n            : vn,
---   have is_open w, from (is_open_gen sc vo).prod uo,
---   have (f, x) ∈ w, from ⟨image_subset_iff.mpr sv, xu⟩,
---   mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
-
-lemma continuous_eval' {s : set α} {x : α} (hs : s ∈ 𝓝 x) :
-  @continuous _ _ (uniform_on β s) _ (λ f, f x) :=
-begin
-  rw continuous_iff_continuous_at,
-  rintros f n (hn : n ∈ 𝓝 (f x)),
-  rw filter.mem_map,
-  rw mem_nhds_iff,
-  obtain ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn,
-  have : v ∈ 𝓝 (f x) := is_open.mem_nhds vo fxv,
-  -- have : (f x)
-  refine ⟨compact_open.gen s v, _, is_open_uniform_on_gen s vo, _⟩,
-  -- obtain ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn,
-  -- have : v ∈ 𝓝 (f x) := is_open.mem_nhds vo fxv,
-  -- obtain ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs,
-  -- refine ⟨compact_open.gen s v, _, _, _⟩,
-  rintros f' a,
-  sorry,
-  exact is_open_uniform_on_gen s vo,
-  refine image_subset_iff.mpr _,
-  -- rw subset_preimage
-  -- change (λ f : C(α, β), f x) ⁻¹' n ∈ 𝓝 f,
-  let w := set.prod (compact_open.gen s v) u,
-  have : w ⊆ ev α β ⁻¹' n,
-  { rintros ⟨f', x'⟩ ⟨hf', hx'⟩, calc
-    f' x' ∈ f' '' s  : mem_image_of_mem f' (us hx')
-    ...       ⊆ v            : hf'
-    ...       ⊆ n            : vn },
-  have : is_open w, from (is_open_uniform_on_gen vo).prod uo,
-  have : (f, x) ∈ w, from ⟨image_subset_iff.mpr sv, xu⟩,
-  exact mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
-end
+lemma continuous_ev₁ [locally_compact_space α] (a : α) : continuous (λ f : C(α, β), f a) :=
+continuous_ev.comp (continuous_id.prod_mk continuous_const)
 
 end ev
+
+section Inf_induced
+
+-- not a very conceptual proof!
+lemma compact_open_eq_Inf_induced :
+  (continuous_map.compact_open : topological_space C(α, β))
+  = ⨅ (s : set α) (hs : is_compact s),
+    topological_space.induced (continuous_map.restrict s) continuous_map.compact_open :=
+begin
+  simp only [← generate_from_Union, induced_generate_from_eq, continuous_map.compact_open],
+  congr' 1,
+  ext m,
+  rw mem_bUnion_iff',
+  split,
+  { rintros ⟨s, hs, u, hu, rfl⟩,
+    refine ⟨s, hs, compact_open.gen univ u, _⟩,
+    refine ⟨⟨univ, is_compact_iff_is_compact_univ.mp hs, u, hu, rfl⟩, _⟩,
+    ext f,
+    simp only [compact_open.gen, mem_set_of_eq, mem_preimage, continuous_map.coe_restrict],
+    rw image_comp f (coe : s → α),
+    simp },
+  { rintros ⟨s, hs, sb, ⟨s', hs', u, hu, rfl⟩, rfl⟩,
+    refine ⟨coe '' s', hs'.image continuous_subtype_coe, u, hu, _⟩,
+    ext f,
+    simp only [compact_open.gen, coe_restrict, mem_set_of_eq, preimage_set_of_eq,
+      image_subset_iff],
+    rw preimage_comp },
+end
+
+lemma nhds_compact_open_eq_Inf_nhds_induced (f : C(α, β)) :
+  𝓝 f = ⨅ s (hs : is_compact s), (𝓝 (f.restrict s)).comap (continuous_map.restrict s) :=
+by { rw [compact_open_eq_Inf_induced], simp [nhds_infi, nhds_induced] }
+
+lemma tendsto_compact_open_iff_forall {ι : Type*} {l : filter ι} (F : ι → C(α, β)) (f : C(α, β)) :
+  filter.tendsto F l (nhds f)
+  ↔ ∀ s (hs : is_compact s), filter.tendsto (λ i, (F i).restrict s) l (𝓝 (f.restrict s)) :=
+by { rw [compact_open_eq_Inf_induced], simp [nhds_infi, nhds_induced, filter.tendsto_comap_iff] }
+
+
+-- prove and move
+lemma continuous_glue {S : set (set α)} (hs : ∀ x : α, ∃ s ∈ S, s ∈ nhds x)
+  {F : Π (s : set α) (hs : s ∈ S), C(s, β)}
+  (h : ∀ s₁ (hs₁ : s₁ ∈ S) s₂ (hs₂ : s₂ ∈ S) (x : α) (hxs₁ : x ∈ s₁) (hxs₂ : x ∈ s₂),
+    F s₁ hs₁ ⟨x, hxs₁⟩ = F s₂ hs₂ ⟨x, hxs₂⟩) :
+  ∃! f : C(α, β), ∀ s (hs : s ∈ S), f.restrict s = F s hs :=
+sorry
+
+-- is `t2_space α` necessary? what are weakest assumptions on `α` to ensure compact subsets are
+-- locally compact?
+lemma exists_tendsto_compact_open_iff_forall [locally_compact_space α] [t2_space α] [t2_space β]
+  {ι : Type*} {l : filter ι} [filter.ne_bot l] (F : ι → C(α, β)) :
+  (∃ f, filter.tendsto F l (nhds f))
+  ↔ ∀ (s : set α) (hs : is_compact s), ∃ f, filter.tendsto (λ i, (F i).restrict s) l (𝓝 f) :=
+begin
+  split,
+  { rintros ⟨f, hf⟩ s hs,
+    rw tendsto_compact_open_iff_forall at hf,
+    exact ⟨f.restrict s, hf s hs⟩ },
+  { intros h,
+    choose f hf using h,
+    -- By uniqueness of limits in a `t2_space`, since `λ i, F i x` tends to both `f s₁ hs₁ x` and
+    -- `f s₂ hs₂ x`, we have `f s₁ hs₁ x = f s₂ hs₂ x`
+    have h : ∀ s₁ (hs₁ : is_compact s₁) s₂ (hs₂ : is_compact s₂) (x : α) (hxs₁ : x ∈ s₁)
+      (hxs₂ : x ∈ s₂), f s₁ hs₁ ⟨x, hxs₁⟩ = f s₂ hs₂ ⟨x, hxs₂⟩,
+    { rintros s₁ hs₁ s₂ hs₂ x hxs₁ hxs₂,
+      haveI := is_compact_iff_compact_space.mp hs₁,
+      haveI := is_compact_iff_compact_space.mp hs₂,
+      have h₁ := (continuous_ev₁ (⟨x, hxs₁⟩ : s₁)).continuous_at.tendsto.comp (hf s₁ hs₁),
+      have h₂ := (continuous_ev₁ (⟨x, hxs₂⟩ : s₂)).continuous_at.tendsto.comp (hf s₂ hs₂),
+      exact tendsto_nhds_unique h₁ h₂ },
+    -- So glue the `f s hs` together and prove that this glued function `f₀` is a limit on each
+    -- compact set `s`
+    have hs : ∀ x : α, ∃ s (hs : is_compact s), s ∈ 𝓝 x,
+    { intros x,
+      obtain ⟨s, hs, hs'⟩ := exists_compact_mem_nhds x,
+      exact ⟨s, hs, hs'⟩ },
+    obtain ⟨f₀, hf₀, -⟩ := continuous_glue hs h,
+    refine ⟨f₀, _⟩,
+    rw tendsto_compact_open_iff_forall,
+    intros s hs,
+    rw hf₀ s hs,
+    exact hf s hs }
+end
+
+end Inf_induced
 
 section coev
 
@@ -432,20 +315,3 @@ rfl
 rfl
 
 end homeomorph
-
-section tsum
-variables {α : Type*} {β : Type*}
-variables [topological_space α] [topological_space β] [add_comm_monoid β] [has_continuous_add β]
-
-lemma has_sum_compact_open_iff_forall {ι : Type*} {l : filter ι} (F : ι → C(α, β)) (f : C(α, β)) :
-  has_sum F f
-  ↔ ∀ (s : set α) (hs : is_compact s), @has_sum _ _ _ (uniform_on β s) F f :=
-tendsto_compact_open_iff_forall (λ a : finset ι, a.sum F) f
-
-lemma summable_compact_open_iff_forall [locally_compact_space α] [t2_space β] {ι : Type*}
-  [decidable_eq ι] [nonempty ι] {l : filter ι} (F : ι → C(α, β)) :
-  summable F
-  ↔ ∀ (s : set α) (hs : is_compact s), @summable _ _ _ (uniform_on β s) F :=
-gluing (λ a : finset ι, a.sum F)
-
-end tsum
