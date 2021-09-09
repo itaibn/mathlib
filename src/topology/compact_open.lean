@@ -143,7 +143,6 @@ lemma tendsto_compact_open_iff_forall {ι : Type*} {l : filter ι} (F : ι → C
   ↔ ∀ s (hs : is_compact s), filter.tendsto (λ i, (F i).restrict s) l (𝓝 (f.restrict s)) :=
 by { rw [compact_open_eq_Inf_induced], simp [nhds_infi, nhds_induced, filter.tendsto_comap_iff] }
 
-
 -- prove and move
 lemma continuous_glue {S : set (set α)} (hs : ∀ x : α, ∃ s ∈ S, s ∈ nhds x)
   {F : Π (s : set α) (hs : s ∈ S), C(s, β)}
