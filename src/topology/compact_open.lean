@@ -48,9 +48,16 @@ variables [topological_space α] [topological_space β] [topological_space γ]
 
 def compact_open.gen (s : set α) (u : set β) : set C(α,β) := {f | f '' s ⊆ u}
 
+def compact_open'.gen (s : set α) (u : set β) : set (α → β) := {f | f '' s ⊆ u}
+
 variables (β)
 def uniform_on.gen (s : set α) : set (set C(α, β)) :=
 {m | ∃ (u : set β) (hu : is_open u), m = compact_open.gen s u}
+
+def uniform_on'.gen (s : set α) : set (set C(α, β)) :=
+{m | ∃ (s' : set α) (hs' : is_compact s) (hss' : s' ⊂ s) (u : set β) (hu : is_open u),
+  m = compact_open.gen s u}
+
 
 /-- For a fixed `s : set α`, the topology on the space of continuous maps `α → β` of "uniform
 convergence on `s`".  Not an instance because it varies with `s`. -/
@@ -58,9 +65,26 @@ def uniform_on (s : set α) : topological_space C(α, β) :=
 topological_space.generate_from (uniform_on.gen β s)
 variables {β}
 
+lemma uniform_on_mono {s₁ s₂ : set α} (h : s₁ ⊆ s₂) : uniform_on β s₂ ≤ uniform_on β s₁ :=
+begin
+  dsimp [uniform_on],
+  apply generate_from_mono,
+  dsimp [uniform_on.gen],
+  rintros s ⟨t, ht, hts⟩,
+  refine ⟨t, ht, _⟩,
+  ext f,
+  simp [compact_open.gen],
+
+end
+
 private lemma is_open_uniform_on_gen (s : set α) {u : set β} (hu : is_open u) :
   (uniform_on β s).is_open (compact_open.gen s u) :=
 topological_space.generate_open.basic _ (by dsimp [uniform_on.gen, mem_set_of_eq]; tauto)
+
+/-- The compact-open topology on the space of continuous maps `α → β`. -/
+instance compact_open' : topological_space (α → β) :=
+topological_space.generate_from
+  {m | ∃ (s : set α) (hs : is_compact s) (u : set β) (hu : is_open u), m = compact_open'.gen s u}
 
 /-- The compact-open topology on the space of continuous maps `α → β`. -/
 instance compact_open : topological_space C(α, β) :=
@@ -89,10 +113,19 @@ lemma nhds_compact_open_eq_Inf (f : C(α, β)) :
   nhds f = ⨅ (s : set α) (hs : is_compact s), @nhds _ (uniform_on β s) f :=
 by { rw [compact_open_eq_Inf_uniform_on], simp [nhds_infi] }
 
+lemma nhds_uniform_on_mono {s₁ s₂ : set α} (hs : s₁ ⊆ s₂) (f : C(α, β)) :
+  @nhds _ (uniform_on β s₂) f ≤ @nhds _ (uniform_on β s₁) f :=
+nhds_mono (uniform_on_mono hs)
+
 lemma tendsto_compact_open_iff_forall {ι : Type*} {l : filter ι} (F : ι → C(α, β)) (f : C(α, β)) :
   filter.tendsto F l (nhds f)
   ↔ ∀ (s : set α) (hs : is_compact s), filter.tendsto F l (@nhds _ (uniform_on β s) f) :=
 by { rw [compact_open_eq_Inf_uniform_on], simp [nhds_infi] }
+
+lemma tendsto_uniform_on_mono {ι : Type*} {l : filter ι} {F : ι → C(α, β)} {s₁ s₂ : set α}
+  (hs : s₁ ⊆ s₂) {f : C(α, β)} (hFf : filter.tendsto F l (@nhds _ (uniform_on β s₂) f)) :
+  filter.tendsto F l (@nhds _ (uniform_on β s₁) f) :=
+hFf.mono_right (nhds_uniform_on_mono hs f)
 
 lemma continuous_eval {s : set α} {a : α} (ha : a ∈ s) :
   @continuous _ _ (uniform_on β s) _ (λ f, f a) :=
@@ -100,6 +133,14 @@ sorry
 
 lemma nhds_uniform_on_eq_nhds_uniform_on_iff [t2_space β] (s : set α) (f₁ f₂ : C(α, β)) :
   @nhds _ (uniform_on β s) f₁ = @nhds _ (uniform_on β s) f₂ ↔ eq_on f₁ f₂ s :=
+sorry
+
+
+noncomputable def continuous_glue {α : Type*} [topological_space α] {β : Type*}
+  [topological_space β] {S : set (set α)}
+  (hs : ∀ x : α, (S ∩ (nhds x).sets).nonempty) {F : Π s, s ∈ S → C(α, β)}
+  (h : ∀ s (hs : s ∈ S) s' (hs' : s' ∈ S), eq_on (F s hs) (F s' hs') (s ∩ s')) :
+  unique {f : C(α, β) // ∀ s (hs : S s), eq_on (F s hs) f s} :=
 sorry
 
 -- gluing lemma, probably can be made a bit more general
@@ -113,34 +154,29 @@ begin
     rw tendsto_compact_open_iff_forall at hf,
     exact ⟨f, hf s hs⟩ },
   { intros h,
-    choose pi_f h_pi_f using h,
-    choose s hs hsx using @exists_compact_mem_nhds α _ _,
-    have h_pi_f' : ∀ (s : set α) (hs : is_compact s), ∀ y ∈ s,
-      filter.tendsto (λ i, F i y) l (nhds (pi_f s hs y)),
-    { intros s hs y hy,
-      have h := (continuous_eval hy).continuous_at.tendsto,
-      exact h.comp (h_pi_f s hs) },
-    let f : α → C(α, β) := λ x, pi_f (s x) (hs x),
-    have hf' : ∀ x, ∀ y ∈ s x, filter.tendsto (λ i, F i y) l (nhds (f x y)),
-    { exact λ x, h_pi_f' (s x) (hs x) },
-    let f₀ : α → β := λ x, f x x,
-    have hf₀ : ∀ x, filter.tendsto (λ i, F i x) l (nhds (f₀ x)),
-    { exact λ x, hf' x x (mem_of_mem_nhds (hsx x)) },
-    have hf₀_cont : continuous f₀,
-    { rw continuous_iff_continuous_at,
-      intros x,
-      refine (f x).continuous.continuous_at.congr _,
-      refine filter.eventually_eq_of_mem (hsx x) _,
-      intros y hy,
-      exact tendsto_nhds_unique (hf' x y hy) (hf₀ y) },
-    use ⟨f₀, hf₀_cont⟩,
+    choose f hf using h,
+    -- By uniqueness of limits in a `t2_space`, since `λ i, F i x` tends to both `f s x` and
+    -- `f s' x`, we have `f s x = f s' x`
+    have h : ∀ s (hs : is_compact s) s' (hs' : is_compact s'), eq_on (f s hs) (f s' hs') (s ∩ s'),
+    { rintros s hs s' hs' x ⟨hxs, hxs'⟩,
+      have Hx := (continuous_eval hxs).continuous_at.tendsto,
+      have Hx' := (continuous_eval hxs').continuous_at.tendsto,
+      exact tendsto_nhds_unique (Hx.comp (hf s hs)) (Hx'.comp (hf s' hs')) },
+    -- So glue the `f s hs` together and prove that this glued function `f₀` is a limit on each
+    -- compact set `s`
+    have hs : ∀ x, (is_compact ∩ (nhds x).sets : set (set α)).nonempty := exists_compact_mem_nhds,
+    haveI := continuous_glue hs h,
+    obtain ⟨f₀, hf₀⟩ := default {f₀ : C(α, β) // ∀ s (hs : is_compact s), eq_on (f s hs) f₀ s},
+    refine ⟨f₀, _⟩,
     rw tendsto_compact_open_iff_forall,
     intros s hs,
-    convert h_pi_f s hs using 1,
+    convert hf s hs using 1,
+    -- For this it suffices to know that on `s` the glued function `f₀` equals `f s hs`
     rw nhds_uniform_on_eq_nhds_uniform_on_iff,
-    intros y hy,
-    exact tendsto_nhds_unique (hf₀ y) (h_pi_f' s hs y hy) }
+    exact (hf₀ s hs).symm }
 end
+
+
 
 section functorial
 
@@ -169,24 +205,106 @@ variables (α β)
 def ev (p : C(α, β) × α) : β := p.1 p.2
 
 variables {α β}
+
+-- The evaluation map C(α, β) → β is continuous if α is locally compact.
+lemma continuous_ev' [locally_compact_space α] : ∀ x, continuous (λ f : C(α, β), f x) :=
+begin
+  intros x,
+  rw continuous_iff_continuous_at,
+  rintros f n hn,
+  obtain ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn,
+  have : v ∈ 𝓝 (f x) := is_open.mem_nhds vo fxv,
+  obtain ⟨s, hs, sv, sc⟩ :=
+    locally_compact_space.local_compact_nhds x (f ⁻¹' v)
+      (f.continuous.tendsto x this),
+  obtain ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs,
+  rw filter.mem_map,
+  let w := compact_open.gen s v,
+  have : w ⊆ (λ f : C(α, β), f x) ⁻¹' n,
+  { rintros f' hf', calc
+    f' x ∈ f' '' s  : mem_image_of_mem f' (us xu)
+    ...       ⊆ v            : hf'
+    ...       ⊆ n            : vn },
+  have : is_open w, from is_open_gen sc vo,
+  have : f ∈ w, from image_subset_iff.mpr sv,
+  exact mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
+
+  -- cases
+end
+
+
 -- The evaluation map C(α, β) × α → β is continuous if α is locally compact.
 lemma continuous_ev [locally_compact_space α] : continuous (ev α β) :=
-continuous_iff_continuous_at.mpr $ assume ⟨f, x⟩ n hn,
-  let ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn in
-  have v ∈ 𝓝 (f x), from is_open.mem_nhds vo fxv,
-  let ⟨s, hs, sv, sc⟩ :=
+begin
+  rw continuous_iff_continuous_at,
+  rintros ⟨f, x⟩ n hn,
+  obtain ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn,
+  have : v ∈ 𝓝 (f x) := is_open.mem_nhds vo fxv,
+  obtain ⟨s, hs, sv, sc⟩ :=
     locally_compact_space.local_compact_nhds x (f ⁻¹' v)
-      (f.continuous.tendsto x this) in
-  let ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs in
-  show (ev α β) ⁻¹' n ∈ 𝓝 (f, x), from
-  let w := set.prod (compact_open.gen s v) u in
-  have w ⊆ ev α β ⁻¹' n, from assume ⟨f', x'⟩ ⟨hf', hx'⟩, calc
+      (f.continuous.tendsto x this),
+  obtain ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs,
+  change (ev α β) ⁻¹' n ∈ 𝓝 (f, x),
+  let w := set.prod (compact_open.gen s v) u,
+  have : w ⊆ ev α β ⁻¹' n,
+  { rintros ⟨f', x'⟩ ⟨hf', hx'⟩, calc
     f' x' ∈ f' '' s  : mem_image_of_mem f' (us hx')
     ...       ⊆ v            : hf'
-    ...       ⊆ n            : vn,
-  have is_open w, from (is_open_gen sc vo).prod uo,
-  have (f, x) ∈ w, from ⟨image_subset_iff.mpr sv, xu⟩,
-  mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
+    ...       ⊆ n            : vn },
+  have : is_open w, from (is_open_gen sc vo).prod uo,
+  have : (f, x) ∈ w, from ⟨image_subset_iff.mpr sv, xu⟩,
+  exact mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
+
+  -- cases
+end
+-- continuous_iff_continuous_at.mpr $ assume ⟨f, x⟩ n hn,
+--   let ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn in
+--   have v ∈ 𝓝 (f x), from is_open.mem_nhds vo fxv,
+--   let ⟨s, hs, sv, sc⟩ :=
+--     locally_compact_space.local_compact_nhds x (f ⁻¹' v)
+--       (f.continuous.tendsto x this) in
+--   let ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs in
+--   show (ev α β) ⁻¹' n ∈ 𝓝 (f, x), from
+--   let w := set.prod (compact_open.gen s v) u in
+--   have w ⊆ ev α β ⁻¹' n, from assume ⟨f', x'⟩ ⟨hf', hx'⟩, calc
+--     f' x' ∈ f' '' s  : mem_image_of_mem f' (us hx')
+--     ...       ⊆ v            : hf'
+--     ...       ⊆ n            : vn,
+--   have is_open w, from (is_open_gen sc vo).prod uo,
+--   have (f, x) ∈ w, from ⟨image_subset_iff.mpr sv, xu⟩,
+--   mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
+
+lemma continuous_eval' {s : set α} {x : α} (hs : s ∈ 𝓝 x) :
+  @continuous _ _ (uniform_on β s) _ (λ f, f x) :=
+begin
+  rw continuous_iff_continuous_at,
+  rintros f n (hn : n ∈ 𝓝 (f x)),
+  rw filter.mem_map,
+  rw mem_nhds_iff,
+  obtain ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn,
+  have : v ∈ 𝓝 (f x) := is_open.mem_nhds vo fxv,
+  -- have : (f x)
+  refine ⟨compact_open.gen s v, _, is_open_uniform_on_gen s vo, _⟩,
+  -- obtain ⟨v, vn, vo, fxv⟩ := mem_nhds_iff.mp hn,
+  -- have : v ∈ 𝓝 (f x) := is_open.mem_nhds vo fxv,
+  -- obtain ⟨u, us, uo, xu⟩ := mem_nhds_iff.mp hs,
+  -- refine ⟨compact_open.gen s v, _, _, _⟩,
+  rintros f' a,
+  sorry,
+  exact is_open_uniform_on_gen s vo,
+  refine image_subset_iff.mpr _,
+  -- rw subset_preimage
+  -- change (λ f : C(α, β), f x) ⁻¹' n ∈ 𝓝 f,
+  let w := set.prod (compact_open.gen s v) u,
+  have : w ⊆ ev α β ⁻¹' n,
+  { rintros ⟨f', x'⟩ ⟨hf', hx'⟩, calc
+    f' x' ∈ f' '' s  : mem_image_of_mem f' (us hx')
+    ...       ⊆ v            : hf'
+    ...       ⊆ n            : vn },
+  have : is_open w, from (is_open_uniform_on_gen vo).prod uo,
+  have : (f, x) ∈ w, from ⟨image_subset_iff.mpr sv, xu⟩,
+  exact mem_nhds_iff.mpr ⟨w, by assumption, by assumption, by assumption⟩
+end
 
 end ev
 
