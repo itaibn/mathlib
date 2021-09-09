@@ -7,23 +7,17 @@ Authors: Anne Baanen
 import linear_algebra.free_module_pid
 import linear_algebra.matrix.absolute_value
 import number_theory.class_number.admissible_absolute_value
-import number_theory.function_field
-import number_theory.number_field
 import ring_theory.class_group
 import ring_theory.norm
 
 /-!
 # Class numbers of global fields
 In this file, we use the notion of "admissible absolute value" to prove
-finiteness of the class group for number fields and function fields,
-and define `class_number` as the order of this group.
+finiteness of the class group for the ring of integers of a global field.
+
 ## Main definitions
- - `class_group.fintype_of_admissible`: if `R` has an admissible absolute value,
+ - `class_group.fintype_of_admissible_of_finite`: if `R` has an admissible absolute value,
    its integral closure has a finite class group
- - `number_field.class_number`: the class number of a number field is the (finite)
-   cardinality of the class group of its ring of integers
- - `function_field.class_number`: the class number of a number field is the (finite)
-   cardinality of the class group of its ring of integers
 -/
 
 open_locale big_operators
@@ -406,67 +400,3 @@ end is_admissible
 end euclidean_domain
 
 end class_group
-
-namespace number_field
-
-variables (K : Type*) [field K] [number_field K]
-
-namespace ring_of_integers
-
-noncomputable instance : fintype (class_group (ring_of_integers K) K) :=
-class_group.fintype_of_admissible_of_finite ℚ _ absolute_value.abs_is_admissible
-
-end ring_of_integers
-
-/-- The class number of a number field is the (finite) cardinality of the class group. -/
-noncomputable def class_number : ℕ := fintype.card (class_group (ring_of_integers K) K)
-
-variables {K}
-
-/-- The class number of a number field is `1` iff the ring of integers is a PID. -/
-theorem class_number_eq_one_iff :
-  class_number K = 1 ↔ is_principal_ideal_ring (ring_of_integers K) :=
-card_class_group_eq_one_iff
-
-end number_field
-
-namespace rat
-
-open number_field
-
-theorem class_number_eq : number_field.class_number ℚ = 1 :=
-class_number_eq_one_iff.mpr $ by convert is_principal_ideal_ring.of_surjective
-  (rat.ring_of_integers_equiv.symm : ℤ →+* ring_of_integers ℚ)
-  (rat.ring_of_integers_equiv.symm.surjective)
-
-end rat
-
-namespace function_field
-
-variables (Fq F : Type) [field Fq] [fintype Fq] [field F]
-variables [algebra (polynomial Fq) F] [algebra (fraction_ring (polynomial Fq)) F]
-variables [is_scalar_tower (polynomial Fq) (fraction_ring (polynomial Fq)) F]
-variables [function_field Fq F] [is_separable (fraction_ring (polynomial Fq)) F]
-
-open_locale classical
-
-namespace ring_of_integers
-
-open function_field
-
-noncomputable instance  : fintype (class_group (ring_of_integers Fq F) F) :=
-class_group.fintype_of_admissible_of_finite (fraction_ring (polynomial Fq)) F
-  (polynomial.card_pow_degree_is_admissible : absolute_value.is_admissible
-    (polynomial.card_pow_degree : absolute_value (polynomial Fq) ℤ))
-
-end ring_of_integers
-
-/-- The class number in a function field is the (finite) cardinality of the class group. -/
-noncomputable def class_number : ℕ := fintype.card (class_group (ring_of_integers Fq F) F)
-
-/-- The class number of a function field is `1` iff the ring of integers is a PID. -/
-theorem class_number_eq_one_iff :
-  class_number Fq F = 1 ↔ is_principal_ideal_ring (ring_of_integers Fq F) :=
-card_class_group_eq_one_iff
-
-end function_field
