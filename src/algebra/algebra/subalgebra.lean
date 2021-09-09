@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Yury Kudryashov
 -/
 import algebra.algebra.operations
+import data.set.Union_lift
 
 /-!
 # Subalgebras over Commutative Semiring
@@ -799,6 +800,79 @@ def under {R : Type u} {A : Type v} [comm_semiring R] [comm_semiring A]
   .. T }
 
 end actions
+section supr_lift
+variables {ι : Type*}
+
+lemma coe_supr_of_directed [nonempty ι] {S : ι → subalgebra R A}
+  (dir : directed (≤) S) :
+  ((supr S : subalgebra R A) : set A) = ⋃ i, (S i : set A) :=
+let K : subalgebra R A :=
+  { carrier := ⋃ i, (S i),
+    mul_mem' := λ x y hx hy,
+      let ⟨i, hi⟩ := set.mem_Union.1 hx in
+      let ⟨j, hj⟩ := set.mem_Union.1 hy in
+      let ⟨k, hik, hjk⟩ := dir i j in
+      set.mem_Union.2 ⟨k, subalgebra.mul_mem (S k) (hik hi) (hjk hj)⟩ ,
+    add_mem' := λ x y hx hy,
+      let ⟨i, hi⟩ := set.mem_Union.1 hx in
+      let ⟨j, hj⟩ := set.mem_Union.1 hy in
+      let ⟨k, hik, hjk⟩ := dir i j in
+      set.mem_Union.2 ⟨k, subalgebra.add_mem (S k) (hik hi) (hjk hj)⟩,
+    algebra_map_mem' := λ r, let i := @nonempty.some ι infer_instance in
+      set.mem_Union.2 ⟨i, subalgebra.algebra_map_mem _ _⟩ } in
+have supr S = K,
+  from le_antisymm (supr_le (λ i, set.subset_Union (λ i, ↑(S i)) i))
+    (set_like.coe_subset_coe.1
+      (set.Union_subset (λ i, set_like.coe_subset_coe.2 (le_supr _ _)))),
+this.symm ▸ rfl
+
+/-- Define an algebra homomorphism on a directed supremum of subalgebras by defining
+it on each subalgebra, and proving that it agrees on the intersection of subalgebras. -/
+noncomputable def supr_lift [nonempty ι]
+  (K : ι → subalgebra R A)
+  (dir : directed (≤) K)
+  (f : Π i, K i →ₐ[R] B)
+  (hf : ∀ (i j : ι) (h : K i ≤ K j), f i = (f j).comp (inclusion h)) :
+  (supr K : subalgebra R A) →ₐ[R] B :=
+{ to_fun := set.lift_of_eq_Union (λ i, ↑(K i)) (λ i x, f i x)
+    (λ i j x hxi hxj,
+      let ⟨k, hik, hjk⟩ := dir i j in
+      begin
+        rw [hf i k hik, hf j k hjk],
+        refl
+      end) _
+    (by exactI coe_supr_of_directed dir),
+  map_one' := set.lift_of_eq_Union_const _ (λ _, 1) (λ _, rfl) _ (by simp),
+  map_zero' := set.lift_of_eq_Union_const _ (λ _, 0) (λ _, rfl) _ (by simp),
+  map_mul' := set.lift_of_eq_Union_binary dir _ (λ _, (*)) (λ _ _ _, rfl) _ (by simp),
+  map_add' := set.lift_of_eq_Union_binary dir _ (λ _, (+)) (λ _ _ _, rfl) _ (by simp),
+  commutes' := λ r, set.lift_of_eq_Union_const _ (λ _, algebra_map _ _ r)
+    (λ _, rfl) _ (λ i, by erw [alg_hom.commutes (f i)]) }
+
+variables [nonempty ι] {K : ι → subalgebra R A} {dir : directed (≤) K}
+  {f : Π i, K i →ₐ[R] B}
+  {hf : ∀ (i j : ι) (h : K i ≤ K j), f i = (f j).comp (inclusion h)}
+
+@[simp] lemma supr_lift_inclusion {i : ι} (x : K i)
+  (h : K i ≤ supr K := le_supr K i) :
+  supr_lift K dir f hf (inclusion h x) = f i x :=
+set.lift_of_eq_Union_inclusion _
+
+@[simp] lemma supr_lift_comp_inclusion {i : ι}
+  (h : K i ≤ supr K := le_supr K i) :
+  (supr_lift K dir f hf).comp (inclusion h) = f i :=
+by ext; simp
+
+@[simp] lemma supr_lift_mk {i : ι} (x : K i)
+  (hx : (x : A) ∈ supr K := set_like.le_def.2 (le_supr K i) x.prop) :
+  supr_lift K dir f hf ⟨x, hx⟩ = f i x :=
+set.lift_of_eq_Union_mk x hx
+
+lemma supr_lift_of_mem {i : ι} (x : supr K) (hx : (x : A) ∈ K i) :
+  supr_lift K dir f hf x = f i ⟨x, hx⟩ :=
+set.lift_of_eq_Union_of_mem x hx
+
+end supr_lift
 
 end subalgebra
 
