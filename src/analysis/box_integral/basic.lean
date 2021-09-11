@@ -1,6 +1,5 @@
 import analysis.box_integral.partition.filter
 import analysis.box_integral.partition.measure
-import analysis.normed_space.operator_norm
 import topology.uniform_space.compact_separated
 
 open_locale big_operators classical topological_space nnreal filter uniformity
@@ -65,20 +64,15 @@ begin
   simp only [inf_prepartition_to_prepartition, inf_comm]
 end
 
-@[simp] lemma integral_sum_disj_union_get (f : (ι → ℝ) → E) (vol : ι →ᵇᵃ (E →L[ℝ] F))
+@[simp] lemma integral_sum_disj_union (f : (ι → ℝ) → E) (vol : ι →ᵇᵃ (E →L[ℝ] F))
   {π₁ π₂ : tagged_prepartition I} (h : disjoint π₁.Union π₂.Union) :
-  integral_sum f vol ((π₁.disj_union π₂).get h) = integral_sum f vol π₁ + integral_sum f vol π₂ :=
+  integral_sum f vol (π₁.disj_union π₂ h) = integral_sum f vol π₁ + integral_sum f vol π₂ :=
 begin
-  refine (sum_union $ prepartition.disjoint_boxes_of_disjoint_Union h).trans
+  refine (prepartition.sum_disj_union_boxes h _).trans
     (congr_arg2 (+) (sum_congr rfl $ λ J hJ, _) (sum_congr rfl $ λ J hJ, _)),
   { rw disj_union_tag_of_mem_left _ hJ },
   { rw disj_union_tag_of_mem_right _ hJ }
 end
-
-@[simp] lemma integral_sum_union_compl_get (f : (ι → ℝ) → E) (vol : ι →ᵇᵃ (E →L[ℝ] F))
-  {π₁ π₂ : tagged_prepartition I} (h : π₂.Union = I \ π₁.Union) :
-  integral_sum f vol ((π₁.union_compl π₂).get h) = integral_sum f vol π₁ + integral_sum f vol π₂ :=
-integral_sum_disj_union_get f vol _
 
 @[simp] lemma integral_sum_add (f g : (ι → ℝ) → E) (vol : ι →ᵇᵃ (E →L[ℝ] F))
   (π : tagged_prepartition I) :
@@ -113,13 +107,13 @@ lemma has_integral.tendsto (h : has_integral I l f vol y) :
   tendsto (integral_sum f vol) (l.to_filter_Union I ⊤) (𝓝 y) := h
 
 lemma has_integral_iff : has_integral I l f vol y ↔
-  ∀ ε > (0 : ℝ), ∃ δ : ℝ≥0 → (ι → ℝ) → ℝ, (∀ c, l.r_cond I (δ c)) ∧
+  ∀ ε > (0 : ℝ), ∃ δ : ℝ≥0 → (ι → ℝ) → Ioi (0 : ℝ), (∀ c, l.r_cond (δ c)) ∧
     ∀ c π, l.mem_base_set I c (δ c) π → is_partition π → dist (integral_sum f vol π) y ≤ ε :=
 ((l.has_basis_to_filter_Union_top I).tendsto_iff nhds_basis_closed_ball).trans $
   by simp [@forall_swap ℝ≥0 (tagged_prepartition I)]
 
 lemma has_integral_of_mul (a : ℝ) (h : ∀ ε : ℝ, 0 < ε →
-  ∃ δ : ℝ≥0 → (ι → ℝ) → ℝ, (∀ c, l.r_cond I (δ c)) ∧ ∀ c π, l.mem_base_set I c (δ c) π →
+  ∃ δ : ℝ≥0 → (ι → ℝ) → Ioi (0 : ℝ), (∀ c, l.r_cond (δ c)) ∧ ∀ c π, l.mem_base_set I c (δ c) π →
     is_partition π → dist (integral_sum f vol π) y ≤ a * ε) :
   has_integral I l f vol y :=
 begin
@@ -134,7 +128,7 @@ lemma integrable_iff_cauchy [complete_space F] :
 cauchy_map_iff_exists_tendsto.symm
 
 lemma integrable_iff_cauchy_basis [complete_space F] :
-  integrable I l f vol ↔ ∀ ε > (0 : ℝ), ∃ r : ℝ≥0 → (ι → ℝ) → ℝ, (∀ c, l.r_cond I (r c)) ∧
+  integrable I l f vol ↔ ∀ ε > (0 : ℝ), ∃ r : ℝ≥0 → (ι → ℝ) → Ioi (0 : ℝ), (∀ c, l.r_cond (r c)) ∧
     ∀ c₁ c₂ π₁ π₂, l.mem_base_set I c₁ (r c₁) π₁ → π₁.is_partition → l.mem_base_set I c₂ (r c₂) π₂ →
       π₂.is_partition → dist (integral_sum f vol π₁) (integral_sum f vol π₂) ≤ ε :=
 begin
@@ -294,13 +288,14 @@ by simpa only [integral_const]
 
 namespace integrable
 
-def convergence_r (h : integrable I l f vol) (ε : ℝ) : ℝ≥0 → (ι → ℝ) → ℝ :=
-if hε : 0 < ε then (has_integral_iff.1 h.has_integral ε hε).some else 0
+def convergence_r (h : integrable I l f vol) (ε : ℝ) : ℝ≥0 → (ι → ℝ) → Ioi (0 : ℝ) :=
+if hε : 0 < ε then (has_integral_iff.1 h.has_integral ε hε).some
+else λ _ _, ⟨1, mem_Ioi.2 zero_lt_one⟩
 
 variables {c c₁ c₂ : ℝ≥0} {ε ε₁ ε₂ : ℝ} {π₁ π₂ : tagged_prepartition I}
 
 lemma convergence_r_cond (h : integrable I l f vol) {ε : ℝ} (h₀ : 0 < ε) (c : ℝ≥0) :
-  l.r_cond I (h.convergence_r ε c) :=
+  l.r_cond (h.convergence_r ε c) :=
 begin
   rw [convergence_r, dif_pos h₀],
   exact (has_integral_iff.1 h.has_integral ε h₀).some_spec.1 _
@@ -320,19 +315,21 @@ lemma dist_integral_sum_le_of_mem_base_set (h : integrable I l f vol)
   dist (integral_sum f vol π₁) (integral_sum f vol π₂) ≤ ε₁ + ε₂ :=
 begin
   rcases h₁.exists_common_compl h₂ HU with ⟨π, hπU, hπc₁, hπc₂⟩,
-  set r : (ι → ℝ) → ℝ := λ x, min (h.convergence_r ε₁ c₁ x) (h.convergence_r ε₂ c₂ x),
-  have hr : l.r_cond I r := (h.convergence_r_cond hpos₁ c₁).min (h.convergence_r_cond hpos₂ c₂),
+  set r : (ι → ℝ) → Ioi (0 : ℝ) := λ x, min (h.convergence_r ε₁ c₁ x) (h.convergence_r ε₂ c₂ x),
+  have hr : l.r_cond r := (h.convergence_r_cond hpos₁ c₁).min (h.convergence_r_cond hpos₂ c₂),
   set πr := π.to_subordinate r,
-  have H₁ : dist (integral_sum f vol _) (integral I l f vol) ≤ ε₁,
-  { refine h.dist_integral_sum_integral_le_of_mem_base_set hpos₁
-      (h₁.union_compl_to_subordinate _ hr.1 hπU hπc₁) (is_partition_union_compl_get _),
-    exact λ _ _, min_le_left _ _ },
+  have H₁ : dist (integral_sum f vol (π₁.union_compl_to_subordinate π hπU r))
+    (integral I l f vol) ≤ ε₁,
+  from  h.dist_integral_sum_integral_le_of_mem_base_set hpos₁
+    (h₁.union_compl_to_subordinate (λ _ _, min_le_left _ _) hπU hπc₁)
+    (is_partition_union_compl_to_subordinate _ _ _ _),
   rw HU at hπU,
-  have H₂ : dist (integral_sum f vol _) (integral I l f vol) ≤ ε₂,
-  { refine h.dist_integral_sum_integral_le_of_mem_base_set hpos₂
-      (h₂.union_compl_to_subordinate _ hr.1 hπU hπc₂) (is_partition_union_compl_get _),
-    exact λ _ _, min_le_right _ _ },
-  simpa using (dist_triangle_right _ _ _).trans (add_le_add H₁ H₂)
+  have H₂ : dist (integral_sum f vol (π₂.union_compl_to_subordinate π hπU r))
+    (integral I l f vol) ≤ ε₂,
+  from  h.dist_integral_sum_integral_le_of_mem_base_set hpos₂
+    (h₂.union_compl_to_subordinate (λ _ _, min_le_right _ _) hπU hπc₂)
+    (is_partition_union_compl_to_subordinate _ _ _ _),
+  simpa [union_compl_to_subordinate] using (dist_triangle_right _ _ _).trans (add_le_add H₁ H₂)
 end
 
 lemma tendsto_integral_sum_to_filter_prod_self_inf_Union_eq_uniformity (h : integrable I l f vol) :
@@ -406,10 +403,11 @@ begin
   intros J hJ,
   have Hle : J ≤ I := π₀.le_of_mem hJ,
   have HJi : integrable J l f vol := h.to_subbox Hle,
-  have hr : l.r_cond J (λ x, min (h.convergence_r δ' C x) (HJi.convergence_r δ' C x)),
-    from ((h.convergence_r_cond δ'0 C).to_subbox Hle).min (HJi.convergence_r_cond δ'0 C),
+  set r := λ x, min (h.convergence_r δ' C x) (HJi.convergence_r δ' C x),
+  have hr : l.r_cond r,
+    from (h.convergence_r_cond δ'0 C).min (HJi.convergence_r_cond δ'0 C),
   have hJd : J.distortion ≤ C, from le_trans (finset.le_sup hJ) (le_max_left _ _),
-  rcases l.exists_mem_base_set_is_partition J hJd hr.1 with ⟨πJ, hC, hp⟩,
+  rcases l.exists_mem_base_set_is_partition J hJd r with ⟨πJ, hC, hp⟩,
   have hC₁ : l.mem_base_set J C (HJi.convergence_r δ' C) πJ,
   { refine hC.mono J le_rfl le_rfl (λ x hx, _), exact min_le_right _ _ },
   have hC₂ : l.mem_base_set J C (h.convergence_r δ' C) πJ,
@@ -465,8 +463,7 @@ begin
   refine integrable_iff_cauchy_basis.2 (λ ε ε0, _),
   rcases exists_pos_mul_lt ε0 (μ.to_box_additive I) with ⟨ε', ε0', hε⟩,
   rcases huc ε' ε0' with ⟨δ, δ0 : 0 < δ, Hδ⟩,
-  refine ⟨λ _ _, δ / 2, λ _, ⟨λ _ _, half_pos δ0, λ _ _ _, rfl⟩, _⟩,
-  intros c₁ c₂ π₁ π₂ h₁ h₁p h₂ h₂p,
+  refine ⟨λ _ _, ⟨δ / 2, half_pos δ0⟩, λ _ _ _, rfl, λ c₁ c₂ π₁ π₂ h₁ h₁p h₂ h₂p, _⟩,
   simp only [dist_eq_norm, integral_sum_sub_partitions _ _ h₁p h₂p,
     box_additive_map.to_smul_apply, ← smul_sub],
   have : ∀ J ∈ π₁.to_prepartition ⊓ π₂.to_prepartition,
@@ -499,10 +496,11 @@ lemma has_integral_of_bRiemann_eq_ff_of_forall_is_o [fintype ι] (hl : l.bRieman
   has_integral I l f vol (g I) :=
 begin
   refine has_integral_of_mul (B I) (λ ε ε0, _),
-  choose! δ δ0 Hδε using H,
+  simp only [subtype.exists'] at H,
+  choose! δ Hδε using H,
   have Hpos : 0 < max (B I) 1, from zero_lt_one.trans_le (le_max_right _ _),
   refine ⟨λ c x, δ c x ε,
-    λ c, (l.r_cond_of_bRiemann_eq_ff hl).2 $ λ x hx, δ0 c x hx _ ε0,
+    λ c, l.r_cond_of_bRiemann_eq_ff hl,
     λ c π hπδ hπp, _⟩,
   rw [← g.sum_partition_boxes le_rfl hπp],
   have : ∀ J ∈ π, dist (vol J (f $ π.tag J)) (g J) ≤ ε * B J,

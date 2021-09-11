@@ -208,9 +208,20 @@ variables {I J : box ι} {i : ι} {x : ℝ}
 /-- The partition of `I : box ι` into the boxes `I ∩ {y | y ≤ x i}` and `I ∩ {y | x i < y}`.
 One of these boxes can be empty, then this partition is just the single-box partition `⊤`. -/
 def split (I : box ι) (i : ι) (x : ℝ) : prepartition I :=
-((subsingle I (I.split_lower i x) $ λ J ⟨H, hJ⟩, hJ ▸ I.split_lower_get_le).union_compl
-  (subsingle I (I.split_upper i x) $ λ J ⟨H, hJ⟩, hJ ▸ I.split_upper_get_le)).get $
-  by simp [diff_eq (I : set (ι → ℝ)) {y | y i ≤ x}, compl_set_of]
+{ boxes := (I.split_lower i x).to_finset ∪ (I.split_upper i x).to_finset,
+  le_of_mem' :=
+    begin
+      simp only [finset.mem_union, part.mem_to_finset],
+      rintro J (⟨H, rfl⟩|⟨H, rfl⟩),
+      exacts [I.split_lower_get_le, I.split_upper_get_le]
+    end,
+  pairwise_disjoint :=
+    begin
+      simp only [finset.coe_union, part.coe_to_finset,
+        pairwise_on_union_of_symmetric (symmetric_disjoint.comap _),
+        set.subsingleton.pairwise_on, part.subsingleton, true_and, mem_set_of_eq],
+      exact λ J₁ h₁ J₂ h₂ _, box.disjoint_of_mem_split_lower_of_mem_split_upper h₁ h₂
+    end }
 
 @[simp] lemma mem_split_iff : J ∈ split I i x ↔ J ∈ I.split_lower i x ∨ J ∈ I.split_upper i x :=
 by simp [split]
@@ -220,7 +231,13 @@ lemma mem_split_iff' : J ∈ split I i x ↔
 by simp [mem_split_iff, box.mem_split_lower, box.mem_split_upper]
 
 lemma is_partition_split (I : box ι) (i : ι) (x : ℝ) : is_partition (split I i x) :=
-is_partition_union_compl_get _
+begin
+  intros y hy,
+  simp only [exists_prop, mem_split_iff],
+  cases le_or_lt (y i) x with hle hlt,
+  exacts [⟨_, or.inl $ part.get_mem _, I.mem_split_lower_get hy hle⟩,
+    ⟨_, or.inr $ part.get_mem _, I.mem_split_upper_get hy hlt⟩]
+end
 
 @[simp] lemma Union_split (I : box ι) (i : ι) (x : ℝ) : (split I i x).Union = I :=
 (is_partition_split I i x).Union_eq
@@ -466,21 +483,18 @@ begin
   replace hf : ∀ I : box ι, ↑I ≤ I₀ → ∀ s, ∑ J in (split_many I s).boxes, f J = f I,
   { intros I hI s,
     induction s using finset.induction_on with a s ha ihs, { simp },
-    rw [split_many_insert, inf_split, ← ihs, sum_bUnion_boxes],
+    rw [split_many_insert, inf_split, ← ihs, bUnion_boxes, sum_bUnion_boxes],
     refine finset.sum_congr rfl (λ J' hJ', _),
     by_cases h : a.2 ∈ Ioo (J'.lower a.1) (J'.upper a.1),
-    { have : ↑J' ≤ I₀, from (with_top.coe_le_coe.2 $ le_of_mem _ hJ').trans hI,
-      refine (sum_union_compl_boxes _ _).trans (eq.trans _ (hf J' this h.1 h.2)),
-      convert congr_arg2 (+) finset.sum_singleton finset.sum_singleton;
-        simp [subsingle, part.to_finset, part.to_option, h.1, h.2]; refl },
+    { rw [split_boxes_of_mem_Ioo h, sum_pair (box.split_lower_get_ne_split_upper_get _ _)],
+      exact hf _ ((with_top.coe_le_coe.2 $ le_of_mem _ hJ').trans hI) _ _ },
     { rw [split_of_not_mem_Ioo h, top_boxes, finset.sum_singleton] } },
   intros I hI π hπ,
   have Hle : ∀ J ∈ π, ↑J ≤ I₀, from λ J hJ, (with_top.coe_le_coe.2 $ π.le_of_mem hJ).trans hI,
   rcases hπ.exists_split_many_le with ⟨s, hs⟩,
-  rw [← hf _ hI, ← inf_of_le_right hs, inf_split_many, sum_bUnion_boxes],
+  rw [← hf _ hI, ← inf_of_le_right hs, inf_split_many, bUnion_boxes, sum_bUnion_boxes],
   exact finset.sum_congr rfl (λ J hJ, (hf _ (Hle _ hJ) _).symm)
 end
-
 
 /-- If `g : M → N` is an additive map and `f` is a box additive map, then `g ∘ f` is a box additive
 map. -/

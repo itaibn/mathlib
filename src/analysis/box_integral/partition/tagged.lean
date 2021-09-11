@@ -176,44 +176,42 @@ def is_Henstock (π : tagged_prepartition I) : Prop := ∀ J ∈ π, π.tag J �
 
 /-- A tagged partition `π` is subordinate to `r : (ι → ℝ) → ℝ` if each box `J ∈ π` is included by
 the closed ball with center `π.tag J` and radius `r (π.tag J)`. -/
-def is_subordinate [fintype ι] (π : tagged_prepartition I) (r : (ι → ℝ) → ℝ) : Prop :=
+def is_subordinate [fintype ι] (π : tagged_prepartition I) (r : (ι → ℝ) → Ioi (0 : ℝ)) : Prop :=
 ∀ J ∈ π, (J : _).Icc ⊆ closed_ball (π.tag J) (r $ π.tag J)
 
+variables {r r₁ r₂ : (ι → ℝ) → Ioi (0 : ℝ)}
+
 @[simp] lemma is_subordinate_bUnion_tagged [fintype ι]
-  {π : prepartition I} {πi : Π J, tagged_prepartition J} {r : (ι → ℝ) → ℝ} :
+  {π : prepartition I} {πi : Π J, tagged_prepartition J} :
   is_subordinate (π.bUnion_tagged πi) r ↔ ∀ J ∈ π, (πi J).is_subordinate r :=
 π.forall_bUnion_tagged (λ x J, J.Icc ⊆ closed_ball x (r x)) πi
 
-lemma is_subordinate.bUnion_prepartition [fintype ι] {r : (ι → ℝ) → ℝ} (h : is_subordinate π r)
-  (πi : Π J, prepartition J) : is_subordinate (π.bUnion_prepartition πi) r :=
+lemma is_subordinate.bUnion_prepartition [fintype ι] (h : is_subordinate π r)
+  (πi : Π J, prepartition J) :
+  is_subordinate (π.bUnion_prepartition πi) r :=
 λ J hJ, subset.trans (box.le_iff_Icc.1 $ π.to_prepartition.le_bUnion_index hJ) $
   h _ $ π.to_prepartition.bUnion_index_mem hJ
 
-lemma is_subordinate.inf_prepartition [fintype ι] {r : (ι → ℝ) → ℝ}
-  (h : is_subordinate π r) (π' : prepartition I) : is_subordinate (π.inf_prepartition π') r :=
+lemma is_subordinate.inf_prepartition [fintype ι] (h : is_subordinate π r) (π' : prepartition I) :
+  is_subordinate (π.inf_prepartition π') r :=
 h.bUnion_prepartition _
 
-lemma is_subordinate.mono' [fintype ι] {π : tagged_prepartition I} {r r' : (ι → ℝ) → ℝ}
-  (hr : π.is_subordinate r) (h : ∀ J ∈ π, r (π.tag J) ≤ r' (π.tag J)) :
-  π.is_subordinate r' :=
-λ J hJ x hx, closed_ball_subset_closed_ball (h _ hJ) (hr _ hJ hx)
+lemma is_subordinate.mono' [fintype ι] {π : tagged_prepartition I}
+  (hr₁ : π.is_subordinate r₁) (h : ∀ J ∈ π, r₁ (π.tag J) ≤ r₂ (π.tag J)) :
+  π.is_subordinate r₂ :=
+λ J hJ x hx, closed_ball_subset_closed_ball (h _ hJ) (hr₁ _ hJ hx)
 
-lemma is_subordinate.mono [fintype ι] {π : tagged_prepartition I} {r r' : (ι → ℝ) → ℝ}
-  (hr : π.is_subordinate r) (h : ∀ x ∈ I.Icc, r x ≤ r' x) :
-  π.is_subordinate r' :=
-hr.mono' $ λ J _, h _ $ π.tag_mem_Icc J
+lemma is_subordinate.mono [fintype ι] {π : tagged_prepartition I}
+  (hr₁ : π.is_subordinate r₁) (h : ∀ x ∈ I.Icc, r₁ x ≤ r₂ x) :
+  π.is_subordinate r₂ :=
+hr₁.mono' $ λ J _, h _ $ π.tag_mem_Icc J
 
-lemma is_subordinate.nonneg [fintype ι] {π : tagged_prepartition I} {r : (ι → ℝ) → ℝ}
-  (h : π.is_subordinate r) (hJ : J ∈ π) : 0 ≤ r (π.tag J) :=
-calc 0 ≤ dist J.upper (π.tag J) : dist_nonneg
-   ... ≤ r (π.tag J)            : h J hJ J.upper_mem_Icc
-
-lemma is_subordinate.diam_le [fintype ι] {π : tagged_prepartition I} {r : (ι → ℝ) → ℝ}
+lemma is_subordinate.diam_le [fintype ι] {π : tagged_prepartition I}
   (h : π.is_subordinate r) (hJ : J ∈ π.boxes) :
   diam J.Icc ≤ 2 * r (π.tag J) :=
 calc diam J.Icc ≤ diam (closed_ball (π.tag J) (r $ π.tag J)) :
   diam_mono (h J hJ) bounded_closed_ball
-            ... ≤ 2 * r (π.tag J) : diam_closed_ball (h.nonneg hJ)
+            ... ≤ 2 * r (π.tag J) : diam_closed_ball (le_of_lt (r _).2)
 
 /-- Tagged partition with single box and prescribed tag. -/
 @[simps { fully_applied := ff }]
@@ -223,7 +221,8 @@ def single (I J : box ι) (hJ :  J ≤ I) (x : ι → ℝ) (h : x ∈ I.Icc) : t
 @[simp] lemma mem_single {J'} (hJ : J ≤ I) (h : x ∈ I.Icc) : J' ∈ single I J hJ x h ↔ J' = J :=
 finset.mem_singleton
 
-instance (I : box ι) : inhabited (tagged_prepartition I) := ⟨single I I le_rfl I.upper I.upper_mem_Icc⟩
+instance (I : box ι) : inhabited (tagged_prepartition I) :=
+⟨single I I le_rfl I.upper I.upper_mem_Icc⟩
 
 lemma is_partition_single_iff (hJ : J ≤ I) (h : x ∈ I.Icc) :
   (single I J hJ x h).is_partition ↔ J = I :=
@@ -243,7 +242,7 @@ forall_mem_single (λ x J, x ∈ J.Icc) hJ h
 @[simp] lemma is_Henstock_single (h : x ∈ I.Icc) : is_Henstock (single I I le_rfl x h) :=
 (is_Henstock_single_iff (le_refl I) h).2 h
 
-@[simp] lemma is_subordinate_single [fintype ι] (hJ : J ≤ I) (h : x ∈ I.Icc) {r : (ι → ℝ) → ℝ} :
+@[simp] lemma is_subordinate_single [fintype ι] (hJ : J ≤ I) (h : x ∈ I.Icc) :
   is_subordinate (single I J hJ x h) r ↔ J.Icc ⊆ closed_ball x (r x) :=
 forall_mem_single (λ x J, J.Icc ⊆ closed_ball x (r x)) hJ h
 
@@ -252,33 +251,35 @@ forall_mem_single (λ x J, J.Icc ⊆ closed_ball x (r x)) hJ h
 prepartition.Union_single hJ
 
 /-- Union of two tagged prepartitions with disjoint unions of boxes. -/
-def disj_union (π₁ : tagged_prepartition I) :
-  tagged_prepartition I →. tagged_prepartition I := λ π₂,
-{ dom := disjoint π₁.Union π₂.Union,
-  get := λ H,
-    { to_prepartition := (π₁.to_prepartition.disj_union π₂.to_prepartition).get H,
-      tag := π₁.boxes.piecewise π₁.tag π₂.tag,
-      tag_mem_Icc := λ J, by { dunfold finset.piecewise, split_ifs,
-        exacts [π₁.tag_mem_Icc J, π₂.tag_mem_Icc J]  } } }
+def disj_union (π₁ π₂ : tagged_prepartition I) (h : disjoint π₁.Union π₂.Union) :
+  tagged_prepartition I :=
+{ to_prepartition := π₁.to_prepartition.disj_union π₂.to_prepartition h,
+  tag := π₁.boxes.piecewise π₁.tag π₂.tag,
+  tag_mem_Icc := λ J, by { dunfold finset.piecewise, split_ifs,
+    exacts [π₁.tag_mem_Icc J, π₂.tag_mem_Icc J]  } }
 
-@[simp] lemma disj_union_get_boxes (h : disjoint π₁.Union π₂.Union) : 
-  ((π₁.disj_union π₂).get h).boxes = π₁.boxes ∪ π₂.boxes := rfl
+@[simp] lemma disj_union_boxes (h : disjoint π₁.Union π₂.Union) : 
+  (π₁.disj_union π₂ h).boxes = π₁.boxes ∪ π₂.boxes := rfl
 
-@[simp] lemma mem_disj_union_get (h : disjoint π₁.Union π₂.Union) :
-  J ∈ (π₁.disj_union π₂).get h ↔ J ∈ π₁ ∨ J ∈ π₂ :=
+@[simp] lemma mem_disj_union (h : disjoint π₁.Union π₂.Union) :
+  J ∈ π₁.disj_union π₂ h ↔ J ∈ π₁ ∨ J ∈ π₂ :=
 finset.mem_union
 
+@[simp] lemma Union_disj_union (h : disjoint π₁.Union π₂.Union) :
+  (π₁.disj_union π₂ h).Union = π₁.Union ∪ π₂.Union :=
+prepartition.Union_disj_union _
+
 lemma disj_union_tag_of_mem_left (h : disjoint π₁.Union π₂.Union) (hJ : J ∈ π₁) :
-  ((π₁.disj_union π₂).get h).tag J = π₁.tag J :=
+  (π₁.disj_union π₂ h).tag J = π₁.tag J :=
 dif_pos hJ
 
 lemma disj_union_tag_of_mem_right (h : disjoint π₁.Union π₂.Union) (hJ : J ∈ π₂) :
-  ((π₁.disj_union π₂).get h).tag J = π₂.tag J :=
+  (π₁.disj_union π₂ h).tag J = π₂.tag J :=
 dif_neg $ λ h₁, h ⟨π₁.subset_Union h₁ J.upper_mem, π₂.subset_Union hJ J.upper_mem⟩
 
-lemma is_subordinate.disj_union [fintype ι] {r} (h₁ : is_subordinate π₁ r)
+lemma is_subordinate.disj_union [fintype ι] (h₁ : is_subordinate π₁ r)
   (h₂ : is_subordinate π₂ r) (h : disjoint π₁.Union π₂.Union) :
-  is_subordinate ((π₁.disj_union π₂).get h) r :=
+  is_subordinate (π₁.disj_union π₂ h) r :=
 begin
   refine λ J hJ, (finset.mem_union.1 hJ).elim (λ hJ, _) (λ hJ, _),
   { rw disj_union_tag_of_mem_left _ hJ, exact h₁ _ hJ },
@@ -287,50 +288,14 @@ end
 
 lemma is_Henstock.disj_union (h₁ : is_Henstock π₁) (h₂ : is_Henstock π₂)
   (h : disjoint π₁.Union π₂.Union) :
-  is_Henstock ((π₁.disj_union π₂).get h) :=
+  is_Henstock (π₁.disj_union π₂ h) :=
 begin
   refine λ J hJ, (finset.mem_union.1 hJ).elim (λ hJ, _) (λ hJ, _),
   { rw disj_union_tag_of_mem_left _ hJ, exact h₁ _ hJ },
   { rw disj_union_tag_of_mem_right _ hJ, exact h₂ _ hJ }
 end
 
-def union_compl (π : tagged_prepartition I) : tagged_prepartition I →. tagged_prepartition I :=
-@pfun.restrict _ _ π.disj_union {π' | π'.Union = I \ π.Union} $ λ π' (H : π'.Union = _),
-  disjoint_sdiff_self_right.mono_right H.le
-
-@[simp] lemma union_compl_get_boxes {π₁ π₂ : tagged_prepartition I} (h : π₂.Union = I \ π₁.Union) :
-  ((π₁.union_compl π₂).get h).boxes = π₁.boxes ∪ π₂.boxes := rfl
-
-@[simp] lemma mem_union_compl_get (h : π₂.Union = I \ π₁.Union) :
-  J ∈ (π₁.union_compl π₂).get h ↔ J ∈ π₁ ∨ J ∈ π₂ :=
-finset.mem_union
-
-lemma union_compl_tag_of_mem_left (h : π₂.Union = I \ π₁.Union) (hJ : J ∈ π₁) :
-  ((π₁.union_compl π₂).get h).tag J = π₁.tag J :=
-dif_pos hJ
-
-lemma union_compl_tag_of_mem_right (h : π₂.Union = I \ π₁.Union) (hJ : J ∈ π₂) :
-  ((π₁.union_compl π₂).get h).tag J = π₂.tag J :=
-disj_union_tag_of_mem_right _ hJ
-
-lemma is_partition_union_compl_get (h : π₂.Union = I \ π₁.Union) :
-  is_partition ((π₁.union_compl π₂).get h) :=
-prepartition.is_partition_union_compl_get h
-
-@[simp] lemma Union_union_compl_get (h : π₂.Union = I \ π₁.Union) :
-  ((π₁.union_compl π₂).get h).Union = I :=
-(is_partition_union_compl_get h).Union_eq
-
-lemma is_subordinate.union_compl [fintype ι] {r} (h₁ : is_subordinate π₁ r)
-  (h₂ : is_subordinate π₂ r) (h : π₂.Union = I \ π₁.Union) :
-  is_subordinate ((π₁.union_compl π₂).get h) r :=
-h₁.disj_union h₂ _
-
-lemma is_Henstock.union_compl (h₁ : is_Henstock π₁) (h₂ : is_Henstock π₂)
-  (h : π₂.Union = I \ π₁.Union) :
-  is_Henstock ((π₁.union_compl π₂).get h) :=
-h₁.disj_union h₂ _
-
+/-- If `I ≤ J`, then every tagged prepartition of `I` is a tagged prepartition of `J`. -/
 def embed_box (I J : box ι) (h : I ≤ J) :
   tagged_prepartition I ↪ tagged_prepartition J :=
 { to_fun := λ π,
@@ -362,12 +327,8 @@ sup_bUnion _ _
   (π.bUnion_prepartition πi).distortion = π.boxes.sup (λ J, (πi J).distortion) :=
 sup_bUnion _ _
 
-@[simp] lemma distortion_disj_union_get (h : disjoint π₁.Union π₂.Union) :
-  ((π₁.disj_union π₂).get h).distortion = max π₁.distortion π₂.distortion :=
-sup_union
-
-@[simp] lemma distortion_union_compl_get (h : π₂.Union = I \ π₁.Union) :
-  ((π₁.union_compl π₂).get h).distortion = max π₁.distortion π₂.distortion :=
+@[simp] lemma distortion_disj_union (h : disjoint π₁.Union π₂.Union) :
+  (π₁.disj_union π₂ h).distortion = max π₁.distortion π₂.distortion :=
 sup_union
 
 lemma distortion_of_const {c} (h₁ : π.boxes.nonempty) (h₂ : ∀ J ∈ π, box.distortion J = c) :

@@ -35,8 +35,9 @@ We define the following operations on boxes:
   map from `box ι` to `set (ι → ℝ)`;
 * `box_integral.box.inter`: intersection of two boxes; this is a partial function in the sense that
   its codomain is `part (box ι)`;
-* `box_integral.box.volume`: volume of a box defined as the product of `I.upper i - I.lower i` over
-  all `i : ι`.
+* `box_integral.box.face I i : box ({i}ᶜ : set ι)`: a face of `I : box_integral.box ι`;
+* `box_integral.box.distortion`: the maximal ratio of two lengths of edges of a box; defined as the
+  supremum of `nndist I.lower I.upper / nndist (I.lower i) (I.upper i)`.
 
 ## Tags
 
@@ -253,6 +254,8 @@ instance : semilattice_sup (box ι) :=
     sup_le (monotone_upper h₁) (monotone_upper h₂)⟩,
   .. box.partial_order, .. box.has_sup }
 
+/-- Face of a box: the box in `ℝⁿ⁻¹ = {i}ᶜ → ℝ` with corners at `I.lower ∘ coe` and
+`I.upper ∘ coe`. -/
 @[simps] def face (I : box ι) (i : ι) : box ({i}ᶜ : set ι) :=
 ⟨I.lower ∘ coe, I.upper ∘ coe, λ j, I.lower_lt_upper j⟩
 
@@ -263,7 +266,9 @@ section distortion
 
 variable [fintype ι]
 
-/-- Distortion of a box `I` is the maximum of the ratios of the lengths of its edges. -/
+/-- Distortion of a box `I` is the maximum of the ratios of the lengths of its edges.
+It is defined as the maximum of the ratios
+`nndist I.lower I.upper / nndist (I.lower i) (I.upper i)`. -/
 def distortion (I : box ι) : ℝ≥0 :=
 finset.univ.sup $ λ i : ι, nndist (I : _).lower I.upper / nndist (I.lower i) (I.upper i)
 

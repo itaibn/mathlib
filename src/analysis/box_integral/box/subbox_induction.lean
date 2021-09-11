@@ -9,24 +9,12 @@ import analysis.specific_limits
 /-!
 # Induction on subboxes
 
-In this file we prove (see
-`box_integral.tagged_partition.exists_is_Henstock_is_subordinate_homothetic`) that for every box `I`
-in `ℝⁿ` and a function `r : ℝⁿ → ℝ` positive on `I` there exists a tagged partition `π` of `I` such
-that
-
-* `π` is a Henstock partition;
-* `π` is subordinate to `r`;
-* each box in `π` is homothetic to `I` with coefficient of the form `1 / 2 ^ n`.
-
-Later we will use this lemma to prove that the Henstock filter is nontrivial, hence the Henstock
-integral is well-defined.
-
-We prove this lemma using a special kind of induction principle formulated in
-`box_integral.box.subbox_induction_on`. Let `p` be a predicate on `box ι`, let `I` be a box. Suppose
-that the following two properties hold true.
+In this file we prove the following induction principle for `box_integral.box`, see
+`box_integral.box.subbox_induction_on`. Let `p` be a predicate on `box_integral.box ι`, let `I` be a
+box. Suppose that the following two properties hold true.
 
 * Consider a smaller box `J ≤ I`. The hyperplanes passing through the center of `J` split it into
-  `2 ^ n` boxes. If `p` holds true on each of these boxes, then it true on `J`.
+  `2 ^ n` boxes. If `p` holds true on each of these boxes, then it is true on `J`.
 * For each `z` in the closed box `I.Icc` there exists a neighborhood `U` of `z` within `I.Icc` such
   that for every box `J ≤ I` such that `z ∈ J.Icc ⊆ U`, if `J` is homothetic to `I` with a
   coefficient of the form `1 / 2 ^ n`, then `p` is true on `J`.
@@ -35,7 +23,7 @@ Then `p I` is true.
 
 ## Tags
 
-partition, tagged partition, Henstock integral
+rectangular box, induction
 -/
 
 open set finset function filter metric
@@ -112,7 +100,8 @@ hold true.
   that for every box `J ≤ I` such that `z ∈ J.Icc ⊆ U`, if `J` is homothetic to `I` with a
   coefficient of the form `1 / 2 ^ n`, then `p` is true on `J`.
 
-Then `p I` is true. -/
+Then `p I` is true. See also `box_integral.box.subbox_induction_on` for a version using
+`box_integral.prepartition.split_center` instead of `box_integral.box.split_center_box`. -/
 @[elab_as_eliminator]
 lemma subbox_induction_on' {p : box ι → Prop} (I : box ι)
   (H_ind : ∀ J ≤ I, (∀ s, p (split_center_box J s)) → p J)
