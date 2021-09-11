@@ -903,8 +903,7 @@ lemma not_mem_Ioo_self_sub : x = 0 → x ∉ Ioo (x - ε) y :=
 assume x0, by simp [x0]
 
 lemma mem_Ioo_self_sub_add : x ≠ ∞ → x ≠ 0 → 0 < ε₁ → 0 < ε₂ → x ∈ Ioo (x - ε₁) (x + ε₂) :=
-assume xt x0 ε0 ε0',
-  ⟨ennreal.sub_lt_self xt x0 ε0, lt_add_right xt ε0'⟩
+assume xt x0 ε0 ε0', ⟨ennreal.sub_lt_self xt x0 ε0, lt_add_right xt ε0'⟩
 
 end interval
 
